@@ -271,34 +271,123 @@ build_slots(const void* services, int stride, int count, int64 now,
 
 const KorailService kKorail[] = {
 	{ T(30, 0, 310, 1320), { "KTX", "KTX", "KTX", "KTX" }, C(0, 84, 166),
-		{ "부산", "Busan", "釜山", "釜山" }, 1, 9, 14 },
+		{ "부산", "Busan", "釜山", "釜山" }, 1, 9, 14,
+		"광명|천안아산|오송|대전|김천구미|동대구|신경주|울산|부산" },
 	{ T(120, 50, 330, 1260), { "KTX-청룡", "KTX-Cheongryong", "KTX青龍",
 		"KTX青龙" }, C(20, 50, 120), { "부산", "Busan", "釜山", "釜山" }, 101,
-		9, 14 },
+		9, 14,
+		"광명|대전|동대구|부산" },
 	{ T(120, 15, 330, 1200), { "KTX-산천", "KTX-Sancheon", "KTX山川",
 		"KTX山川" }, C(0, 130, 140), { "마산", "Masan", "馬山", "马山" }, 201,
-		7, 12 },
+		7, 12,
+		"광명|천안아산|오송|대전|동대구|밀양|진영|창원중앙|창원|마산" },
 	{ T(180, 75, 330, 1200), { "KTX-산천", "KTX-Sancheon", "KTX山川",
 		"KTX山川" }, C(0, 130, 140), { "진주", "Jinju", "晋州", "晋州" }, 281,
-		7, 12 },
+		7, 12,
+		"광명|대전|동대구|밀양|창원중앙|창원|마산|진주" },
 	{ T(120, 45, 345, 1215), { "KTX", "KTX", "KTX", "KTX" }, C(0, 84, 166),
-		{ "포항", "Pohang", "浦項", "浦项" }, 241, 7, 12 },
+		{ "포항", "Pohang", "浦項", "浦项" }, 241, 7, 12,
+		"광명|대전|동대구|신경주|포항" },
 	{ T(180, 20, 380, 1220), { "KTX", "KTX", "KTX", "KTX" }, C(0, 84, 166),
-		{ "목포", "Mokpo", "木浦", "木浦" }, 401, 5, 8 },
+		{ "목포", "Mokpo", "木浦", "木浦" }, 401, 5, 8,
+		"광명|천안아산|오송|공주|익산|정읍|광주송정|나주|목포" },
 	{ T(60, 35, 360, 1290), { "KTX-산천", "KTX-Sancheon", "KTX山川",
 		"KTX山川" }, C(0, 130, 140), { "강릉", "Gangneung", "江陵", "江陵" },
-		801, 1, 4 },
+		801, 1, 4,
+		"청량리|상봉|양평|만종|횡성|둔내|평창|진부|강릉" },
 	{ T(120, 65, 360, 1260), { "ITX-새마을", "ITX-Saemaeul", "ITXセマウル",
 		"ITX新村" }, C(200, 30, 70), { "부산", "Busan", "釜山", "釜山" }, 1001,
-		13, 14 },
+		13, 14,
+		"영등포|수원|천안|대전|김천|구미|동대구|밀양|구포|부산" },
 	{ T(120, 25, 335, 1340), { "무궁화호", "Mugunghwa", "ムグンファ号",
 		"无穷花号" }, C(240, 120, 20), { "부산", "Busan", "釜山", "釜山" }, 1201,
-		13, 14 },
+		13, 14,
+		"영등포|수원|평택|천안|조치원|대전|영동|김천|구미|왜관|대구|밀양|구포|부산" },
 	{ T(180, 100, 400, 1300), { "무궁화호", "Mugunghwa", "ムグンファ号",
 		"无穷花号" }, C(240, 120, 20), { "대전", "Daejeon", "大田", "大田" },
-		1251, 13, 14 },
+		1251, 13, 14,
+		"영등포|수원|평택|천안|조치원|대전" },
 };
 const int kKorailCount = sizeof(kKorail) / sizeof(kKorail[0]);
+
+
+// Korean, English, Japanese, Chinese.
+static const char* kKorailStations[][4] = {
+	{ "광명", "Gwangmyeong", "光明", "光明" },
+	{ "천안아산", "Cheonan-Asan", "天安牙山", "天安牙山" },
+	{ "오송", "Osong", "五松", "五松" },
+	{ "대전", "Daejeon", "大田", "大田" },
+	{ "김천구미", "Gimcheon-Gumi", "金泉亀尾", "金泉龟尾" },
+	{ "동대구", "Dongdaegu", "東大邱", "东大邱" },
+	{ "신경주", "Singyeongju", "新慶州", "新庆州" },
+	{ "울산", "Ulsan", "蔚山", "蔚山" },
+	{ "부산", "Busan", "釜山", "釜山" },
+	{ "밀양", "Miryang", "密陽", "密阳" },
+	{ "진영", "Jinyeong", "進永", "进永" },
+	{ "창원중앙", "Changwon Jungang", "昌原中央", "昌原中央" },
+	{ "창원", "Changwon", "昌原", "昌原" },
+	{ "마산", "Masan", "馬山", "马山" },
+	{ "진주", "Jinju", "晋州", "晋州" },
+	{ "포항", "Pohang", "浦項", "浦项" },
+	{ "공주", "Gongju", "公州", "公州" },
+	{ "익산", "Iksan", "益山", "益山" },
+	{ "정읍", "Jeongeup", "井邑", "井邑" },
+	{ "광주송정", "Gwangju Songjeong", "光州松汀", "光州松汀" },
+	{ "나주", "Naju", "羅州", "罗州" },
+	{ "목포", "Mokpo", "木浦", "木浦" },
+	{ "청량리", "Cheongnyangni", "清涼里", "清凉里" },
+	{ "상봉", "Sangbong", "上鳳", "上凤" },
+	{ "양평", "Yangpyeong", "楊平", "杨平" },
+	{ "만종", "Manjong", "万鍾", "万钟" },
+	{ "횡성", "Hoengseong", "横城", "横城" },
+	{ "둔내", "Dunnae", "屯内", "屯内" },
+	{ "평창", "Pyeongchang", "平昌", "平昌" },
+	{ "진부", "Jinbu", "珍富", "珍富" },
+	{ "강릉", "Gangneung", "江陵", "江陵" },
+	{ "영등포", "Yeongdeungpo", "永登浦", "永登浦" },
+	{ "수원", "Suwon", "水原", "水原" },
+	{ "평택", "Pyeongtaek", "平沢", "平泽" },
+	{ "천안", "Cheonan", "天安", "天安" },
+	{ "조치원", "Jochiwon", "鳥致院", "鸟致院" },
+	{ "영동", "Yeongdong", "永同", "永同" },
+	{ "김천", "Gimcheon", "金泉", "金泉" },
+	{ "구미", "Gumi", "亀尾", "龟尾" },
+	{ "왜관", "Waegwan", "倭館", "倭馆" },
+	{ "대구", "Daegu", "大邱", "大邱" },
+	{ "구포", "Gupo", "亀浦", "龟浦" },
+};
+
+
+BString
+korail_stops(const KorailService& service, int lang)
+{
+	static const char* kLead[4] = { "정차역  ", "Stops at  ", "停車駅  ",
+		"停靠站  " };
+	static const char* kSeparator[4] = { " · ", " · ", "・", "・" };
+	BString out(kLead[lang]);
+	const int known = sizeof(kKorailStations) / sizeof(kKorailStations[0]);
+	const char* s = service.stops;
+	bool first = true;
+	while (*s != '\0') {
+		const char* end = strchr(s, '|');
+		if (end == NULL)
+			end = s + strlen(s);
+		BString name(s, end - s);
+		const char* shown = name.String();
+		for (int i = 0; i < known; i++) {
+			if (name == kKorailStations[i][0]) {
+				shown = kKorailStations[i][lang];
+				break;
+			}
+		}
+		if (!first)
+			out << kSeparator[lang];
+		out << shown;
+		first = false;
+		s = *end == '\0' ? end : end + 1;
+	}
+	return out;
+}
 
 
 // #pragma mark - London Victoria

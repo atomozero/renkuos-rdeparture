@@ -178,6 +178,7 @@ BoardView::BoardView(BRect frame, int airport)
 	fStation(airport >= kAirportCount ? airport - kAirportCount : -1),
 	fStationKey(-1),
 	fStationMinute(-1),
+	fMarqueeCount(0),
 	fPhase(0),
 	fFixedPhase(-1),
 	fFooter(0),
@@ -1500,6 +1501,8 @@ BoardView::_TickStation(bigtime_t now)
 		if (Window() != NULL)
 			Invalidate();
 	}
+	if (station.style == STYLE_KORAIL)
+		_DrawMarquees(now);
 
 	if (Window() != NULL && now - fLastMouse > 3000000) {
 		be_app->ObscureCursor();
@@ -1821,6 +1824,7 @@ BoardView::_DrawSeoul(int lang, int64 now)
 	float m = floorf(W * 0.012f);
 	v->SetHighColor(kLedBackground);
 	v->FillRect(bounds);
+	fMarqueeCount = 0;
 	_DrawStationHeader(kTitle[lang], lang == 0 ? "Seoul Station" : "서울역",
 		now, make_color(12, 32, 80),
 		make_color(0, 120, 210));
@@ -1830,7 +1834,7 @@ BoardView::_DrawSeoul(int lang, int64 now)
 	float labelTop = bandH;
 	v->SetHighColor(28, 30, 40);
 	v->FillRect(BRect(0, labelTop, W - 1, labelTop + labelH - 1));
-	float fractions[6] = { 0.17f, 0.11f, 0.22f, 0.14f, 0.13f, 0.0f };
+	float fractions[6] = { 0.15f, 0.09f, 0.36f, 0.11f, 0.09f, 0.0f };
 	float xs[7];
 	xs[0] = m;
 	for (int i = 0; i < 5; i++)
@@ -1879,6 +1883,25 @@ BoardView::_DrawSeoul(int lang, int64 now)
 			rowH * 0.55f, kLedText, ALIGN_CENTER, &fFallback);
 		_DrawIn(v, service.dest[lang], BRect(xs[2] + 6, y, xs[3] - 8,
 			y + rowH - 1), rowH * 0.6f, kLedText, ALIGN_LEFT, &fFallback);
+		// After the destination, small, the stations it stops at: they
+		// scroll, redrawn on every tick by _DrawMarquees().
+		BFont destFont(font_for(service.dest[lang], fFallback, fFallback,
+			fCJK));
+		destFont.SetSize(rowH * 0.6f);
+		float marqueeLeft = xs[2] + 6 + destFont.StringWidth(service.dest[lang])
+			+ rowH * 0.5f;
+		if (fMarqueeCount < 12 && marqueeLeft < xs[3] - 40) {
+			Marquee& marquee = fMarquees[fMarqueeCount++];
+			marquee.area.Set(marqueeLeft, y + rowH * 0.2f, xs[3] - 10,
+				y + rowH * 0.8f);
+			marquee.text = korail_stops(service, lang);
+			marquee.background = row % 2 == 0 ? make_color(14, 15, 20)
+				: kLedBackground;
+			BFont font(font_for(marquee.text.String(), fFallback, fFallback,
+				fCJK));
+			font.SetSize(rowH * 0.32f);
+			marquee.width = font.StringWidth(marquee.text.String());
+		}
 		snprintf(buffer, sizeof(buffer), "%02d:%02d",
 			(int)(slots[i].departs % 1440 / 60), (int)(slots[i].departs % 60));
 		_DrawIn(v, buffer, BRect(xs[3], y, xs[4] - 8, y + rowH - 1),
@@ -1886,7 +1909,7 @@ BoardView::_DrawSeoul(int lang, int64 now)
 
 		int track = service.trackMin
 			+ (int)((h >> 16) % (service.trackMax - service.trackMin + 1));
-		static const char* kTrack[4] = { "%d번", "%d", "%d番線", "%d站台" };
+		static const char* kTrack[4] = { "%d", "%d", "%d番線", "%d站台" };
 		snprintf(buffer, sizeof(buffer), kTrack[lang], track);
 		_DrawIn(v, buffer, BRect(xs[4], y, xs[5] - 8, y + rowH - 1),
 			rowH * 0.55f, kLedText, ALIGN_CENTER, &fFallback);
@@ -2513,4 +2536,50 @@ BoardView::_DrawSydney(int64 now)
 	}
 	v->Sync();
 	fBoard->Unlock();
+}
+
+
+
+// The stopping stations of Seoul's trains, moving right to left, a little
+// further on every tick. Only these strips are redrawn.
+void
+BoardView::_DrawMarquees(bigtime_t now)
+{
+	if (fBoard == NULL || fMarqueeCount == 0)
+		return;
+	const float kSpeed = 70;	// pixels a second
+	BView* v = fBoardView;
+	fBoard->Lock();
+	BRegion dirty;
+	for (int i = 0; i < fMarqueeCount; i++) {
+		Marquee& marquee = fMarquees[i];
+		BRect area = marquee.area;
+		float gap = area.Height() * 4;
+		float span = marquee.width + gap;
+		float offset = fmodf((float)(now / 1000) * kSpeed / 1000, span);
+		BRegion clip(area);
+		v->ConstrainClippingRegion(&clip);
+		v->SetHighColor(marquee.background);
+		v->FillRect(area);
+		BFont font(font_for(marquee.text.String(), fFallback, fFallback,
+			fCJK));
+		font.SetFace(B_REGULAR_FACE);
+		font.SetSize(area.Height() * 0.53f);
+		font_height fh;
+		font.GetHeight(&fh);
+		float y = floorf(area.top + (area.Height() + 1 + fh.ascent
+			- fh.descent) / 2);
+		v->SetFont(&font);
+		v->SetHighColor(170, 190, 215);
+		v->SetDrawingMode(B_OP_OVER);
+		for (float x = area.left - offset; x < area.right; x += span)
+			v->DrawString(marquee.text.String(), BPoint(x, y));
+		v->SetDrawingMode(B_OP_COPY);
+		v->ConstrainClippingRegion(NULL);
+		dirty.Include(area);
+	}
+	v->Sync();
+	fBoard->Unlock();
+	if (Window() != NULL)
+		Invalidate(&dirty);
 }

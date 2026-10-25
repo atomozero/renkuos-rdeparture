@@ -14,6 +14,8 @@
 
 #include <SupportDefs.h>
 
+#include <String.h>
+
 #include "Data.h"
 
 
@@ -118,10 +120,16 @@ struct KorailService {
 	int			number;
 	int			trackMin;
 	int			trackMax;
+	// Where it stops, by Korean name, separated by '|'.
+	const char*	stops;
 };
 
 extern const KorailService kKorail[];
 extern const int kKorailCount;
+
+// The stops of a Seoul train in one of the four languages (0 Korean,
+// 1 English, 2 Japanese, 3 Chinese), joined for the scrolling line.
+BString	korail_stops(const KorailService& service, int lang);
 
 
 // London Victoria.
