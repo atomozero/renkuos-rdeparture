@@ -1502,7 +1502,7 @@ BoardView::_TickStation(bigtime_t now)
 		if (Window() != NULL)
 			Invalidate();
 	}
-	if (station.style == STYLE_KORAIL)
+	if (station.style == STYLE_KORAIL || station.style == STYLE_SYDNEY)
 		_DrawMarquees(now);
 
 	if (Window() != NULL && now - fLastMouse > 3000000) {
@@ -1892,8 +1892,9 @@ BoardView::_DrawSeoul(int lang, int64 now)
 		destFont.SetSize(rowH * 0.6f);
 		float marqueeLeft = xs[2] + 6 + destFont.StringWidth(service.dest[lang])
 			+ rowH * 0.5f;
-		if (fMarqueeCount < 12 && marqueeLeft < xs[3] - 40) {
+		if (fMarqueeCount < 16 && marqueeLeft < xs[3] - 40) {
 			Marquee& marquee = fMarquees[fMarqueeCount++];
+			marquee.vertical = false;
 			marquee.area.Set(marqueeLeft, y + rowH * 0.2f, xs[3] - 10,
 				y + rowH * 0.8f);
 			marquee.text = korail_stops(service, lang);
@@ -2303,6 +2304,8 @@ BoardView::_DrawSydney(int64 now)
 	float H = bounds.Height() + 1;
 	v->SetHighColor(52, 54, 58);
 	v->FillRect(bounds);
+	fMarqueeCount = 0;
+	fMarqueeStart = system_time();
 
 	BFont bold(fFallback);
 	BFont regular(fFallback);
@@ -2470,6 +2473,21 @@ BoardView::_DrawSydney(int64 now)
 			lines++;
 			s = *end == '\0' ? end : end + 1;
 		}
+		// More stations than lines: they scroll up, redrawn on every tick
+		// by _DrawMarquees().
+		if (*s != '\0' && lines > 0 && fMarqueeCount < 16) {
+			int total = 1;
+			for (const char* c = run.stops; *c != '\0'; c++)
+				total += *c == '|';
+			Marquee& marquee = fMarquees[fMarqueeCount++];
+			marquee.vertical = true;
+			marquee.area.Set(r.left + p, stopsTop, stopsRight - 1,
+				stopsTop + lines * unit - 1);
+			marquee.text = run.stops;
+			marquee.background = kPaper;
+			marquee.lineH = unit;
+			marquee.width = total * unit;
+		}
 		_DrawIn(v, "Platform", BRect(stopsRight, stopsTop, r.right - p,
 			stopsTop + unit * 0.6f), unit * 0.5f, kInk, ALIGN_RIGHT, &regular);
 		snprintf(buffer, sizeof(buffer), "%d", run.platform);
@@ -2544,7 +2562,8 @@ BoardView::_DrawSydney(int64 now)
 
 // The stopping stations of Seoul's trains. A list longer than its strip
 // travels left until its end shows, rests, and travels back; one that fits
-// stays put. Only these strips are redrawn.
+// stays put. Sydney's go up instead (_DrawStopsScroll). Only these strips
+// are redrawn.
 void
 BoardView::_DrawMarquees(bigtime_t now)
 {
@@ -2557,6 +2576,11 @@ BoardView::_DrawMarquees(bigtime_t now)
 	for (int i = 0; i < fMarqueeCount; i++) {
 		Marquee& marquee = fMarquees[i];
 		BRect area = marquee.area;
+		if (marquee.vertical) {
+			_DrawStopsScroll(marquee, now);
+			dirty.Include(area);
+			continue;
+		}
 		float overflow = marquee.width - area.Width();
 		float offset = 0;
 		if (overflow > 0) {
@@ -2599,4 +2623,50 @@ BoardView::_DrawMarquees(bigtime_t now)
 	fBoard->Unlock();
 	if (Window() != NULL)
 		Invalidate(&dirty);
+}
+
+
+// A Sydney screen's stations, more than it has lines for: they rest, go up
+// until the last of them sits on the bottom line, rest there, and start
+// again from the top. Called by _DrawMarquees() with the board locked.
+void
+BoardView::_DrawStopsScroll(const Marquee& marquee, bigtime_t now)
+{
+	static const rgb_color kInk = { 28, 28, 30, 255 };
+	const float kRest = 2.0f;
+	float speed = marquee.lineH * 1.5f;	// pixels a second
+	BRect area = marquee.area;
+	float overflow = marquee.width - (area.Height() + 1);
+	float travel = overflow / speed;
+	float t = fmodf((float)((now - fMarqueeStart) / 1000) / 1000,
+		travel + 2 * kRest);
+	float offset = 0;
+	if (t >= kRest + travel)
+		offset = overflow;
+	else if (t >= kRest)
+		offset = floorf((t - kRest) * speed);
+
+	BView* v = fBoardView;
+	BRegion clip(area);
+	v->ConstrainClippingRegion(&clip);
+	v->SetHighColor(marquee.background);
+	v->FillRect(area);
+	BFont font(fFallback);
+	font.SetFace(B_REGULAR_FACE);
+	float y = area.top - offset;
+	const char* s = marquee.text.String();
+	while (*s != '\0' && y < area.bottom) {
+		const char* end = strchr(s, '|');
+		if (end == NULL)
+			end = s + strlen(s);
+		if (y + marquee.lineH > area.top && end > s) {
+			BString name(s, end - s);
+			_DrawIn(v, name.String(), BRect(area.left, y, area.right,
+				y + marquee.lineH - 1), marquee.lineH * 0.95f, kInk,
+				ALIGN_LEFT, &font);
+		}
+		y += marquee.lineH;
+		s = *end == '\0' ? end : end + 1;
+	}
+	v->ConstrainClippingRegion(NULL);
 }

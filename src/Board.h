@@ -145,14 +145,20 @@ private:
 			int				fStationKey;	// what is on the board now
 			int64			fStationMinute;
 
-			// Seoul's stopping stations, scrolling along each row.
+			// Seoul's stopping stations, scrolling along each row; Sydney's go up.
 			struct Marquee {
 				BRect		area;
 				BString		text;
 				rgb_color	background;
 				float		width;
+				// Sydney's stations: '|'-separated lines that go up the
+				// strip instead of along it; width is then their height.
+				bool		vertical;
+				float		lineH;
 			};
-			Marquee			fMarquees[12];
+			void			_DrawStopsScroll(const Marquee& marquee,
+								bigtime_t now);
+			Marquee			fMarquees[16];
 			int				fMarqueeCount;
 			bigtime_t		fMarqueeStart;
 			int				fPhase;
