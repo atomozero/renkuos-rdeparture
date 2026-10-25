@@ -1,5 +1,7 @@
 # R Departures
 
+<img src="docs/icon.png" width="64" alt="">
+
 **English** | [日本語](README.ja.md) | [한국어](README.ko.md)
 
 An airport departures board for Haiku and RenkuOS, full screen and without a

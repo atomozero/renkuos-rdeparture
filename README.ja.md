@@ -1,5 +1,7 @@
 # R Departures
 
+<img src="docs/icon.png" width="64" alt="">
+
 [English](README.md) | **日本語** | [한국어](README.ko.md)
 
 Haiku/RenkuOS 用の空港出発案内板です。ウィンドウ枠なしの全画面で表示します。
