@@ -88,11 +88,12 @@ public:
 			// Also used without a window, to render snapshots.
 			void			LayoutBoard(BRect bounds);
 			void			Tick();
-			// 0 .. kAirportCount - 1 are the airports, kAirportCount is
-			// Tokyo Station.
+			// 0 .. kAirportCount - 1 are the airports, then the stations
+			// (kStations in Station.h).
 			void			SetAirport(int index);
 			int				AirportIndex() const
-								{ return fStation ? kAirportCount : fAirport; }
+								{ return fStation >= 0
+									? kAirportCount + fStation : fAirport; }
 			void			SetFixedPhase(int phase) { fFixedPhase = phase; }
 			BBitmap*		Bitmap() const { return fBoard; }
 			bool			Animating() const;
@@ -128,13 +129,19 @@ private:
 			void			_ShowMenu(BPoint where);
 			void			_TickStation(bigtime_t now);
 			void			_DrawStation(int board, int lang, int64 now);
+			void			_DrawSeoul(int lang, int64 now);
+			void			_DrawVictoria(int page, int64 now);
+			void			_DrawSydney(int64 now);
+			void			_DrawStationHeader(const char* title,
+								const char* subtitle, int64 now,
+								rgb_color band, rgb_color accent);
 			void			_DrawIn(BView* view, const char* text, BRect r,
-								float size, rgb_color color, int align);
+								float size, rgb_color color, int align,
+								const BFont* latin = NULL);
 
 			int				fAirport;	// the last airport, also in station mode
-			bool			fStation;
-			int				fStationBoard;
-			int				fStationLang;
+			int				fStation;	// into kStations, -1 for an airport
+			int				fStationKey;	// what is on the board now
 			int64			fStationMinute;
 			int				fPhase;
 			int				fFixedPhase;

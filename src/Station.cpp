@@ -9,7 +9,13 @@
 #include <string.h>
 
 
-const char* kStationCode = "TOKYO";
+const Station kStations[] = {
+	{ "TOKYO", "Tokyo Station  東京駅 (JR)", STYLE_JR, 9 * 60, DST_NONE },
+	{ "SEOUL", "Seoul Station  서울역 (Korail)", STYLE_KORAIL, 9 * 60, DST_NONE },
+	{ "VICTORIA", "London Victoria", STYLE_UK, 0, DST_EU },
+	{ "SYDNEY", "Sydney Central", STYLE_SYDNEY, 10 * 60, DST_AU },
+};
+const int kStationCount = sizeof(kStations) / sizeof(kStations[0]);
 
 #define C(r, g, b) { r, g, b }
 
@@ -205,3 +211,201 @@ build_trains(const StationBoard& board, int boardIndex, int64 now, Train* out,
 	}
 	return count;
 }
+
+
+// #pragma mark - timetables
+
+
+int
+build_slots(const void* services, int stride, int count, int64 now,
+	int64 since, Slot* out, int max)
+{
+	int shown = 0;
+	int64 today = now / 1440;
+	for (int64 day = today - 1; day <= today + 1; day++) {
+		for (int s = 0; s < count; s++) {
+			const Timing& t = *(const Timing*)((const char*)services
+				+ s * stride);
+			int k = 0;
+			for (int m = t.first + t.offset; m <= t.last; m += t.interval, k++) {
+				int64 departs = day * 1440 + m;
+				if (departs < since)
+					continue;
+				Slot slot;
+				slot.service = s;
+				slot.index = k;
+				slot.departs = departs;
+				if (shown < max) {
+					out[shown++] = slot;
+					continue;
+				}
+				int latest = 0;
+				for (int i = 1; i < shown; i++) {
+					if (out[i].departs > out[latest].departs)
+						latest = i;
+				}
+				if (departs < out[latest].departs)
+					out[latest] = slot;
+			}
+		}
+	}
+	for (int i = 1; i < shown; i++) {
+		Slot slot = out[i];
+		int j = i - 1;
+		while (j >= 0 && (out[j].departs > slot.departs
+				|| (out[j].departs == slot.departs
+					&& out[j].service > slot.service))) {
+			out[j + 1] = out[j];
+			j--;
+		}
+		out[j + 1] = slot;
+	}
+	return shown;
+}
+
+
+// #pragma mark - Seoul
+
+
+#define T(interval, offset, first, last) { interval, offset, first, last }
+
+const KorailService kKorail[] = {
+	{ T(30, 0, 310, 1320), { "KTX", "KTX", "KTX", "KTX" }, C(0, 84, 166),
+		{ "부산", "Busan", "釜山", "釜山" }, 1, 9, 14 },
+	{ T(120, 50, 330, 1260), { "KTX-청룡", "KTX-Cheongryong", "KTX青龍",
+		"KTX青龙" }, C(20, 50, 120), { "부산", "Busan", "釜山", "釜山" }, 101,
+		9, 14 },
+	{ T(120, 15, 330, 1200), { "KTX-산천", "KTX-Sancheon", "KTX山川",
+		"KTX山川" }, C(0, 130, 140), { "마산", "Masan", "馬山", "马山" }, 201,
+		7, 12 },
+	{ T(180, 75, 330, 1200), { "KTX-산천", "KTX-Sancheon", "KTX山川",
+		"KTX山川" }, C(0, 130, 140), { "진주", "Jinju", "晋州", "晋州" }, 281,
+		7, 12 },
+	{ T(120, 45, 345, 1215), { "KTX", "KTX", "KTX", "KTX" }, C(0, 84, 166),
+		{ "포항", "Pohang", "浦項", "浦项" }, 241, 7, 12 },
+	{ T(180, 20, 380, 1220), { "KTX", "KTX", "KTX", "KTX" }, C(0, 84, 166),
+		{ "목포", "Mokpo", "木浦", "木浦" }, 401, 5, 8 },
+	{ T(60, 35, 360, 1290), { "KTX-산천", "KTX-Sancheon", "KTX山川",
+		"KTX山川" }, C(0, 130, 140), { "강릉", "Gangneung", "江陵", "江陵" },
+		801, 1, 4 },
+	{ T(120, 65, 360, 1260), { "ITX-새마을", "ITX-Saemaeul", "ITXセマウル",
+		"ITX新村" }, C(200, 30, 70), { "부산", "Busan", "釜山", "釜山" }, 1001,
+		13, 14 },
+	{ T(120, 25, 335, 1340), { "무궁화호", "Mugunghwa", "ムグンファ号",
+		"无穷花号" }, C(240, 120, 20), { "부산", "Busan", "釜山", "釜山" }, 1201,
+		13, 14 },
+	{ T(180, 100, 400, 1300), { "무궁화호", "Mugunghwa", "ムグンファ号",
+		"无穷花号" }, C(240, 120, 20), { "대전", "Daejeon", "大田", "大田" },
+		1251, 13, 14 },
+};
+const int kKorailCount = sizeof(kKorail) / sizeof(kKorail[0]);
+
+
+// #pragma mark - London Victoria
+
+
+static const CallingPoint kDartford[] = {
+	{ "Denmark Hill", 6 }, { "Peckham Rye", 9 }, { "Nunhead", 12 },
+	{ "Lewisham", 17 }, { "Blackheath", 20 }, { "Kidbrooke", 24 },
+	{ "Eltham", 27 }, { "Falconwood", 30 }, { "Welling", 33 },
+	{ "Bexleyheath", 36 }, { "Barnehurst", 39 }, { "Dartford", 46 },
+};
+static const CallingPoint kRamsgateRochester[] = {
+	{ "Bromley South", 16 }, { "Rochester", 42 }, { "Chatham", 45 },
+	{ "Gillingham", 49 }, { "Rainham", 54 }, { "Sittingbourne", 62 },
+	{ "Faversham", 70 }, { "Whitstable", 78 }, { "Chestfield", 82 },
+	{ "Herne Bay", 86 }, { "Birchington-on-Sea", 96 },
+	{ "Westgate-on-Sea", 99 }, { "Margate", 103 }, { "Broadstairs", 109 },
+	{ "Ramsgate", 115 },
+};
+static const CallingPoint kGillingham[] = {
+	{ "Bromley South", 16 }, { "St Mary Cray", 22 }, { "Swanley", 27 },
+	{ "Farningham Road", 31 }, { "Longfield", 36 }, { "Meopham", 40 },
+	{ "Sole Street", 43 }, { "Rochester", 52 }, { "Chatham", 55 },
+	{ "Gillingham", 59 },
+};
+static const CallingPoint kBeckenham[] = {
+	{ "Brixton", 4 }, { "Herne Hill", 7 }, { "West Dulwich", 10 },
+	{ "Sydenham Hill", 12 }, { "Penge East", 16 }, { "Kent House", 18 },
+	{ "Beckenham Junction", 21 },
+};
+static const CallingPoint kOrpington[] = {
+	{ "Brixton", 4 }, { "Herne Hill", 7 }, { "West Dulwich", 10 },
+	{ "Sydenham Hill", 12 }, { "Penge East", 16 }, { "Kent House", 18 },
+	{ "Beckenham Junction", 21 }, { "Shortlands", 24 },
+	{ "Bromley South", 27 }, { "Bickley", 30 }, { "Petts Wood", 34 },
+	{ "Orpington", 38 },
+};
+static const CallingPoint kDover[] = {
+	{ "Bromley South", 16 }, { "Longfield", 33 }, { "Meopham", 37 },
+	{ "Rochester", 48 }, { "Chatham", 51 }, { "Gillingham", 56 },
+	{ "Rainham", 61 }, { "Newington", 66 }, { "Sittingbourne", 70 },
+	{ "Teynham", 76 }, { "Faversham", 82 }, { "Selling", 88 },
+	{ "Canterbury East", 95 }, { "Bekesbourne", 99 }, { "Adisham", 103 },
+	{ "Aylesham", 106 }, { "Snowdown", 109 }, { "Shepherds Well", 113 },
+	{ "Kearsney", 119 }, { "Dover Priory", 125 },
+};
+static const CallingPoint kRamsgateMaidstone[] = {
+	{ "Bromley South", 16 }, { "St Mary Cray", 22 }, { "Swanley", 27 },
+	{ "Otford", 35 }, { "Borough Green & Wrotham", 42 },
+	{ "West Malling", 47 }, { "East Malling", 50 }, { "Barming", 53 },
+	{ "Maidstone East", 58 }, { "Bearsted", 64 }, { "Hollingbourne", 68 },
+	{ "Harrietsham", 72 }, { "Lenham", 76 }, { "Ashford International", 90 },
+	{ "Canterbury West", 108 }, { "Ramsgate", 128 },
+};
+
+#define CALLS(c) c, (int)(sizeof(c) / sizeof(c[0]))
+
+const UkService kVictoria[] = {
+	{ T(30, 4, 330, 1410), "Dartford", "via Bexleyheath", CALLS(kDartford),
+		8, 1, 2 },
+	{ T(60, 10, 330, 1350), "Ramsgate", "via Rochester",
+		CALLS(kRamsgateRochester), 12, 3, 6 },
+	{ T(60, 12, 330, 1380), "Gillingham", "via Meopham", CALLS(kGillingham),
+		8, 3, 6 },
+	{ T(30, 13, 330, 1410), "Beckenham Jcn", "via Penge East",
+		CALLS(kBeckenham), 8, 1, 2 },
+	{ T(30, 28, 330, 1410), "Orpington", "via Penge East", CALLS(kOrpington),
+		8, 1, 2 },
+	{ T(60, 40, 330, 1320), "Dover Priory", "via Meopham", CALLS(kDover),
+		8, 3, 6 },
+	{ T(60, 55, 330, 1320), "Ramsgate", "via Maidstone East",
+		CALLS(kRamsgateMaidstone), 8, 3, 6 },
+};
+const int kVictoriaCount = sizeof(kVictoria) / sizeof(kVictoria[0]);
+
+
+// #pragma mark - Sydney Central
+
+
+const SydneyService kSydney[] = {
+	{ T(30, 5, 300, 1440), "T1", C(247, 144, 30), "Emu Plains",
+		"via Parramatta", "Limited stops", 8, 16, 17 },
+	{ T(30, 20, 300, 1440), "T1", C(247, 144, 30), "Richmond",
+		"via Blacktown", "Limited stops", 8, 16, 17 },
+	{ T(15, 8, 300, 1440), "T1", C(247, 144, 30), "Hornsby", "via Gordon",
+		"All stations", 8, 18, 19 },
+	{ T(15, 11, 300, 1440), "T9", C(209, 31, 47), "Hornsby",
+		"via Strathfield", "Limited stops", 8, 16, 17 },
+	{ T(15, 4, 300, 1440), "T2", C(0, 152, 205), "Leppington",
+		"via Granville", "All stations", 8, 20, 21 },
+	{ T(30, 19, 300, 1440), "T2", C(0, 152, 205), "Parramatta",
+		"via Lidcombe", "All stations", 8, 20, 21 },
+	{ T(15, 6, 300, 1440), "T8", C(0, 149, 74), "Macarthur",
+		"via Airport", "Limited stops", 8, 22, 23 },
+	{ T(30, 21, 300, 1440), "T8", C(0, 149, 74), "Revesby",
+		"via Sydenham", "All stations", 8, 22, 23 },
+	{ T(10, 0, 300, 1440), "T4", C(0, 94, 184), "Bondi Junction", "",
+		"All stations", 8, 24, 25 },
+	{ T(15, 3, 300, 1440), "T4", C(0, 94, 184), "Cronulla",
+		"via Sydenham", "Limited stops", 8, 24, 25 },
+	{ T(15, 10, 300, 1440), "T4", C(0, 94, 184), "Waterfall",
+		"via Hurstville", "All stations", 8, 24, 25 },
+	{ T(60, 18, 300, 1380), "BMT", C(249, 157, 28), "Katoomba",
+		"via Penrith", "Limited stops", 8, 4, 12 },
+	{ T(60, 45, 300, 1380), "CCN", C(209, 31, 47), "Newcastle Interchange",
+		"via Gosford", "Limited stops", 8, 1, 3 },
+	{ T(60, 33, 300, 1380), "SCO", C(0, 152, 205), "Kiama",
+		"via Wollongong", "Limited stops", 8, 24, 25 },
+};
+const int kSydneyCount = sizeof(kSydney) / sizeof(kSydney[0]);

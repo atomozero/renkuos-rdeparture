@@ -9,7 +9,6 @@
 #include <string.h>
 
 
-enum { DST_NONE = 0, DST_EU, DST_US };
 
 
 // #pragma mark - cities
@@ -524,27 +523,42 @@ nth_weekday(int y, int m, int weekday, int n)
 
 
 int64
-airport_local_minutes(const Airport& airport, time_t utc)
+local_minutes(int utcOffset, int dstRule, time_t utc)
 {
 	int64 utcMin = (int64)utc / 60;
 	int y, m, d;
 	civil_from_days(utcMin / 1440, y, m, d);
 
 	bool summer = false;
-	if (airport.dstRule == DST_EU) {
+	if (dstRule == DST_EU) {
 		// Last Sunday of March to last Sunday of October, 01:00 UTC.
 		int64 start = days_from_civil(y, 3, nth_weekday(y, 3, 0, 0)) * 1440 + 60;
 		int64 end = days_from_civil(y, 10, nth_weekday(y, 10, 0, 0)) * 1440 + 60;
 		summer = utcMin >= start && utcMin < end;
-	} else if (airport.dstRule == DST_US) {
+	} else if (dstRule == DST_US) {
 		// Second Sunday of March to first Sunday of November, 02:00 local.
 		int64 start = days_from_civil(y, 3, nth_weekday(y, 3, 0, 2)) * 1440
-			+ 120 - airport.utcOffset;
+			+ 120 - utcOffset;
 		int64 end = days_from_civil(y, 11, nth_weekday(y, 11, 0, 1)) * 1440
-			+ 120 - airport.utcOffset - 60;
+			+ 120 - utcOffset - 60;
 		summer = utcMin >= start && utcMin < end;
+	} else if (dstRule == DST_AU) {
+		// Southern summer: from the first Sunday of October, 02:00 standard,
+		// to the first Sunday of April, 03:00 daylight (02:00 standard).
+		int64 end = days_from_civil(y, 4, nth_weekday(y, 4, 0, 1)) * 1440
+			+ 120 - utcOffset;
+		int64 start = days_from_civil(y, 10, nth_weekday(y, 10, 0, 1)) * 1440
+			+ 120 - utcOffset;
+		summer = utcMin < end || utcMin >= start;
 	}
-	return utcMin + airport.utcOffset + (summer ? 60 : 0);
+	return utcMin + utcOffset + (summer ? 60 : 0);
+}
+
+
+int64
+airport_local_minutes(const Airport& airport, time_t utc)
+{
+	return local_minutes(airport.utcOffset, airport.dstRule, utc);
 }
 
 

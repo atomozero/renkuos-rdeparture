@@ -1,6 +1,9 @@
 /*
- * Tokyo Station: JR departure boards, in the style of the LED and LCD
- * boards above the platforms there, not split flaps.
+ * Railway stations: Tokyo, Seoul, London Victoria and Sydney Central, each
+ * in the style of its own departure boards rather than split flaps.
+ *
+ * Tokyo: JR departure boards, in the style of the LED and LCD boards above
+ * the platforms there.
  *
  * Four boards take turns: the Tokaido Shinkansen, the Shinkansen to the
  * north, the Tokaido, Ueno-Tokyo and Yokosuka lines, and the Chuo Line. The
@@ -10,6 +13,8 @@
 #define STATION_H
 
 #include <SupportDefs.h>
+
+#include "Data.h"
 
 
 struct Service {
@@ -57,9 +62,103 @@ struct Train {
 
 extern const StationBoard kStationBoards[];
 extern const int kStationBoardCount;
-extern const char* kStationCode;
 
 int		build_trains(const StationBoard& board, int boardIndex, int64 now,
 			Train* out, int max);
+
+
+// #pragma mark - the stations
+
+
+enum {
+	STYLE_JR = 0,		// Tokyo: JR LED/LCD boards, stopping patterns
+	STYLE_KORAIL,		// Seoul: Korail departure screens, four languages
+	STYLE_UK,			// London Victoria: a column per train, calling points
+	STYLE_SYDNEY		// Sydney Central: Sydney Trains line badges
+};
+
+struct Station {
+	const char*	code;		// for --airport and the settings file
+	const char*	menuName;
+	int			style;
+	int			utcOffset;	// minutes east of UTC in winter
+	int			dstRule;	// DST_* from Data.h
+};
+
+extern const Station kStations[];
+extern const int kStationCount;
+
+
+// When a service runs: every `interval` minutes from `first` + `offset` to
+// `last` (minutes after midnight). Every service struct below starts with
+// one, so build_slots() can walk any of them.
+struct Timing {
+	int			interval;
+	int			offset;
+	int			first;
+	int			last;
+};
+
+struct Slot {
+	int			service;
+	int			index;		// the how-manieth train of the day
+	int64		departs;	// minutes since the epoch, local time
+};
+
+int		build_slots(const void* services, int stride, int count, int64 now,
+			int64 since, Slot* out, int max);
+
+
+// Seoul: names in Korean, English, Japanese and Chinese.
+struct KorailService {
+	Timing		timing;
+	const char*	type[4];
+	uint8		color[3];
+	const char*	dest[4];
+	int			number;
+	int			trackMin;
+	int			trackMax;
+};
+
+extern const KorailService kKorail[];
+extern const int kKorailCount;
+
+
+// London Victoria.
+struct CallingPoint {
+	const char*	name;
+	int			minutes;	// after departure
+};
+
+struct UkService {
+	Timing		timing;
+	const char*	dest;
+	const char*	via;
+	const CallingPoint* calls;
+	int			callCount;
+	int			cars;
+	int			trackMin;
+	int			trackMax;
+};
+
+extern const UkService kVictoria[];
+extern const int kVictoriaCount;
+
+
+// Sydney Central.
+struct SydneyService {
+	Timing		timing;
+	const char*	line;
+	uint8		color[3];
+	const char*	dest;
+	const char*	via;
+	const char*	pattern;
+	int			cars;
+	int			trackMin;
+	int			trackMax;
+};
+
+extern const SydneyService kSydney[];
+extern const int kSydneyCount;
 
 #endif	// STATION_H

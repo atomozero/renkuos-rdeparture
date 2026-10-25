@@ -3,7 +3,8 @@
 **English** | [日本語](README.ja.md) | [한국어](README.ko.md)
 
 An airport departures board for Haiku and RenkuOS, full screen and without a
-window border -- and Tokyo Station's train boards. Every character is a split flap: when something changes the
+window border -- and the train boards of Tokyo, Seoul, London Victoria and
+Sydney Central. Every character is a split flap: when something changes the
 flaps rattle through other letters and settle, row after row, and the airline
 column is one flap per airline in its colours.
 
@@ -53,10 +54,14 @@ clock: check-in, gate open, boarding, final call, gate closed, departed.
 
 ![Flaps changing](docs/flipping.png)
 
-## Tokyo Station
+## Railway stations
 
-Tokyo Station, the last entry in the gear menu, is a JR station board rather
-than a flap board: the LED and LCD style above the platforms there, the
+The last four entries in the gear menu are railway stations. They are not flap
+boards: each looks like the departure screens of that station.
+
+### Tokyo Station
+
+A JR station board: the LED and LCD style above the platforms there, the
 departure time, destination, track in the line's colour, the train on the
 line's colour, and for each train which of the main stations it stops at (○)
 or passes (─). Four boards take turns every twelve seconds, each in Japanese
@@ -69,19 +74,50 @@ and then English:
   and the Odoriko limited express
 - Chuo Line: Rapid, Chuo and Ome Special Rapid, Azusa and Kaiji
 
-Like the flights, the trains are a generated timetable of the real services,
-not live data.
+Like the flights, the trains everywhere are a generated timetable of the real
+services, not live data.
 
 ![Tokaido Shinkansen](docs/tokyo-shinkansen.png)
 ![The Shinkansen to the north](docs/tokyo-north.png)
 ![Tokaido, Ueno-Tokyo and Yokosuka lines, in English](docs/tokyo-tokaido-line.png)
+
+### Seoul Station
+
+Korail's departure screen: the train type on its colour (KTX, KTX-Cheongryong,
+KTX-Sancheon, ITX-Saemaeul, Mugunghwa), train number, destination, departure
+time, platform and remarks (on time, boarding, closing, delayed), in Korean,
+English, Japanese and Chinese in turn.
+
+![Seoul Station](docs/seoul.png)
+![Seoul Station, in English](docs/seoul-english.png)
+
+### London Victoria
+
+A column per train, as on the screens above the platforms at Victoria: time,
+destination and route, then *Wait* with a raised hand until the platform is
+called, *Platform* with someone walking once it is, *Cancelled* with a cross,
+or an expected time when late. Below it, the calling points with their times,
+a page at a time when they do not fit, and the length of the train.
+
+![London Victoria](docs/victoria.png)
+
+### Sydney Central
+
+Sydney Trains: departure time and minutes to go, the line (T1, T2, T4, T8, T9,
+Blue Mountains, Central Coast & Newcastle, South Coast) in its colour, the
+destination with its route and stopping pattern, the number of cars and the
+platform.
+
+![Sydney Central](docs/sydney.png)
+
+Each station keeps its own local time, summer time included.
 
 ## Keys
 
 | Key | |
 | --- | --- |
 | Esc, Q | quit |
-| Right arrow, space | next airport (Tokyo Station after San Francisco) |
+| Right arrow, space | next airport (the stations after San Francisco) |
 | Left arrow | previous airport |
 
 The mouse pointer hides after three seconds.

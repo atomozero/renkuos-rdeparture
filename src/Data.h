@@ -120,6 +120,9 @@ int				footer_count();
 const char*		footer_text(int index, int lang);
 void			format_date(char* out, int size, int64 localMinutes, int lang);
 
+enum { DST_NONE = 0, DST_EU, DST_US, DST_AU };
+
+int64			local_minutes(int utcOffset, int dstRule, time_t utc);
 int64			airport_local_minutes(const Airport& airport, time_t utc);
 int				build_departures(const Airport& airport, int64 now,
 					Flight* out, int max);

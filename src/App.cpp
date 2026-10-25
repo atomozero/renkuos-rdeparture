@@ -7,10 +7,12 @@
  * For checking it without a screen (over ssh, say):
  *
  *   RDepartures --snapshot out.png [--size 1600x768] [--wait 4]
- *       [--airport ICN|TOKYO] [--phase 1] [--offset minutes]
+ *       [--airport ICN|TOKYO|SEOUL|VICTORIA|SYDNEY] [--phase 1]
+ *       [--offset minutes]
  *
  * renders the board off-screen after --wait seconds of animation and saves
- * it. --phase fixes the language phase (for TOKYO, board * 2 + language),
+ * it. --phase fixes the language phase (TOKYO: board * 2 + language, SEOUL:
+ * language, VICTORIA: page of calling points),
  * --offset moves the clock.
  *
  * Esc or Q quits, the arrow keys and space change the airport, the gear in
@@ -68,8 +70,10 @@ airport_index(const char* code)
 		if (strcasecmp(kAirports[i].code, code) == 0)
 			return i;
 	}
-	if (strcasecmp(kStationCode, code) == 0)
-		return kAirportCount;
+	for (int i = 0; i < kStationCount; i++) {
+		if (strcasecmp(kStations[i].code, code) == 0)
+			return kAirportCount + i;
+	}
 	return -1;
 }
 
