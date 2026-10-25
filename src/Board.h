@@ -154,6 +154,7 @@ private:
 			};
 			Marquee			fMarquees[12];
 			int				fMarqueeCount;
+			bigtime_t		fMarqueeStart;
 			int				fPhase;
 			int				fFixedPhase;
 			int				fFooter;

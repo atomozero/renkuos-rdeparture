@@ -179,6 +179,7 @@ BoardView::BoardView(BRect frame, int airport)
 	fStationKey(-1),
 	fStationMinute(-1),
 	fMarqueeCount(0),
+	fMarqueeStart(0),
 	fPhase(0),
 	fFixedPhase(-1),
 	fFooter(0),
@@ -1825,6 +1826,7 @@ BoardView::_DrawSeoul(int lang, int64 now)
 	v->SetHighColor(kLedBackground);
 	v->FillRect(bounds);
 	fMarqueeCount = 0;
+	fMarqueeStart = system_time();
 	_DrawStationHeader(kTitle[lang], lang == 0 ? "Seoul Station" : "서울역",
 		now, make_color(12, 32, 80),
 		make_color(0, 120, 210));
@@ -2540,8 +2542,9 @@ BoardView::_DrawSydney(int64 now)
 
 
 
-// The stopping stations of Seoul's trains, moving right to left, a little
-// further on every tick. Only these strips are redrawn.
+// The stopping stations of Seoul's trains. A list longer than its strip
+// travels left until its end shows, rests, and travels back; one that fits
+// stays put. Only these strips are redrawn.
 void
 BoardView::_DrawMarquees(bigtime_t now)
 {
@@ -2554,9 +2557,24 @@ BoardView::_DrawMarquees(bigtime_t now)
 	for (int i = 0; i < fMarqueeCount; i++) {
 		Marquee& marquee = fMarquees[i];
 		BRect area = marquee.area;
-		float gap = area.Height() * 4;
-		float span = marquee.width + gap;
-		float offset = fmodf((float)(now / 1000) * kSpeed / 1000, span);
+		float overflow = marquee.width - area.Width();
+		float offset = 0;
+		if (overflow > 0) {
+			// Out, rest, back, rest.
+			const float kRest = 1.5f;
+			float travel = overflow / kSpeed;
+			float cycle = 2 * (travel + kRest);
+			float t = fmodf((float)((now - fMarqueeStart) / 1000) / 1000,
+				cycle);
+			if (t < kRest)
+				offset = 0;
+			else if (t < kRest + travel)
+				offset = (t - kRest) * kSpeed;
+			else if (t < 2 * kRest + travel)
+				offset = overflow;
+			else
+				offset = overflow - (t - 2 * kRest - travel) * kSpeed;
+		}
 		BRegion clip(area);
 		v->ConstrainClippingRegion(&clip);
 		v->SetHighColor(marquee.background);
@@ -2572,8 +2590,7 @@ BoardView::_DrawMarquees(bigtime_t now)
 		v->SetFont(&font);
 		v->SetHighColor(170, 190, 215);
 		v->SetDrawingMode(B_OP_OVER);
-		for (float x = area.left - offset; x < area.right; x += span)
-			v->DrawString(marquee.text.String(), BPoint(x, y));
+		v->DrawString(marquee.text.String(), BPoint(area.left - offset, y));
 		v->SetDrawingMode(B_OP_COPY);
 		v->ConstrainClippingRegion(NULL);
 		dirty.Include(area);

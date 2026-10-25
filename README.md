@@ -86,8 +86,9 @@ services, not live data.
 Korail's departure screen: the train type on its colour (KTX, KTX-Cheongryong,
 KTX-Sancheon, ITX-Saemaeul, Mugunghwa), train number, destination, departure
 time, platform and remarks (on time, boarding, closing, delayed), in Korean,
-English, Japanese and Chinese in turn. After each destination the stations the
-train stops at scroll past in small type.
+English, Japanese and Chinese in turn. After each destination, in small type, the
+stations the train stops at; a list too long for its space slides to its end
+and back.
 
 ![Seoul Station](docs/seoul.png)
 ![Seoul Station, in English](docs/seoul-english.png)

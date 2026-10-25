@@ -361,10 +361,8 @@ static const char* kKorailStations[][4] = {
 BString
 korail_stops(const KorailService& service, int lang)
 {
-	static const char* kLead[4] = { "정차역  ", "Stops at  ", "停車駅  ",
-		"停靠站  " };
 	static const char* kSeparator[4] = { " · ", " · ", "・", "・" };
-	BString out(kLead[lang]);
+	BString out;
 	const int known = sizeof(kKorailStations) / sizeof(kKorailStations[0]);
 	const char* s = service.stops;
 	bool first = true;
