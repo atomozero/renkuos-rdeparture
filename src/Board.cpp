@@ -2330,16 +2330,20 @@ BoardView::_DrawSydney(int64 now)
 		ALIGN_RIGHT, &fFallback);
 	draw_gear(v, fGearRect, make_color(190, 190, 190), make_color(52, 54, 58));
 
-	// The tabs over the columns.
-	const int kColumns = 8;
-	float colW = floorf((W - m) / kColumns);
+	// The tabs over the columns. A screen wider than 16:9 has one row of
+	// taller screens, and Sydney services loses its fifth column.
+	bool wide = W * 9 > H * 16;
+	int columns = wide ? 7 : 8;
+	int rows = wide ? 1 : 2;
+	int sydney = wide ? 4 : 5;
+	float colW = floorf((W - m) / columns);
 	float tabTop = headH;
 	float tabH = floorf(H * 0.055f);
 	struct { int from, to; const char* name; rgb_color color; } tabs[] = {
-		{ 0, 4, "Sydney services", kOrange },
-		{ 5, 5, "Intercity & Events", kOrange },
-		{ 6, 6, "Regional services", kOrange },
-		{ 7, 7, "Metro", kTeal },
+		{ 0, sydney - 1, "Sydney services", kOrange },
+		{ sydney, sydney, "Intercity & Events", kOrange },
+		{ sydney + 1, sydney + 1, "Regional services", kOrange },
+		{ sydney + 2, sydney + 2, "Metro", kTeal },
 	};
 	for (int t = 0; t < 4; t++) {
 		BRect tab(m + tabs[t].from * colW, tabTop, m + (tabs[t].to + 1) * colW
@@ -2350,20 +2354,26 @@ BoardView::_DrawSydney(int64 now)
 			kLedText, ALIGN_LEFT, &fFallback);
 	}
 
-	// Two rows of portrait screens.
+	// Rows of portrait screens, eight to a row in kSydneyPanels.
 	float gridTop = tabTop + tabH + floorf(m * 0.8f);
-	float panelH = floorf((H - gridTop - m) / 2) - floorf(m * 0.6f);
+	float panelH = floorf((H - gridTop - m) / rows) - floorf(m * 0.6f);
 	for (int i = 0; i < kSydneyPanelCount; i++) {
 		const SydneyPanel& panel = kSydneyPanels[i];
-		int col = i % kColumns;
-		int row = i / kColumns;
+		int col = i % 8;
+		int row = i / 8;
+		if (row >= rows || (col == 4 && sydney == 4))
+			continue;
+		if (col > 4 && sydney == 4)
+			col--;
 		BRect r(m + col * colW, gridTop + row * (panelH + m * 1.2f),
 			m + (col + 1) * colW - 5, gridTop + row * (panelH + m * 1.2f)
 				+ panelH);
 		v->SetHighColor(kPaper);
 		v->FillRect(r);
 		float p = floorf(r.Width() * 0.06f);
-		float unit = floorf(panelH * 0.052f);	// one line of stations
+		// One line of stations; a tall screen is no wider for it.
+		float tall = panelH < r.Width() * 1.6f ? panelH : r.Width() * 1.6f;
+		float unit = floorf(tall * 0.052f);
 		rgb_color color = { panel.color[0], panel.color[1], panel.color[2],
 			255 };
 
@@ -2376,7 +2386,7 @@ BoardView::_DrawSydney(int64 now)
 
 		Slot slots[8];
 		int count = build_slots(panel.runs, sizeof(SydneyRun), panel.runCount,
-			now, now, slots, panel.kind == PANEL_CITY ? 7 : 3);
+			now, now, slots, panel.kind == PANEL_CITY ? 7 : wide ? 6 : 3);
 		if (count == 0)
 			continue;
 		const SydneyRun& run = panel.runs[slots[0].service];
