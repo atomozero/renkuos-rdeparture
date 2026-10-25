@@ -145,20 +145,38 @@ extern const UkService kVictoria[];
 extern const int kVictoriaCount;
 
 
-// Sydney Central.
-struct SydneyService {
-	Timing		timing;
-	const char*	line;
-	uint8		color[3];
-	const char*	dest;
-	const char*	via;
-	const char*	pattern;
-	int			cars;
-	int			trackMin;
-	int			trackMax;
+// Sydney Central: the wall of portrait screens on the concourse, one per
+// line or platform, grouped under Sydney services, Intercity, Regional and
+// Metro.
+enum {
+	PANEL_LINE = 0,		// line badge, destination, stops, platform
+	PANEL_CITY,			// the City Circle: a black band, many following trains
+	PANEL_LONG,			// intercity and regional: the departure time first
+	PANEL_NOTICE		// a printed notice instead of trains
 };
 
-extern const SydneyService kSydney[];
-extern const int kSydneyCount;
+struct SydneyRun {
+	Timing		timing;
+	const char*	dest;
+	const char*	via;
+	// Stations, separated by '|'; an empty one leaves a line free.
+	const char*	stops;
+	const char*	pattern;	// All Stops, Limited Stops, Express
+	int			cars;
+	int			platform;
+	bool		booked;		// regional: booked seats only
+};
+
+struct SydneyPanel {
+	int			kind;
+	const char*	line;		// T1, M1 ...
+	uint8		color[3];
+	const SydneyRun* runs;
+	int			runCount;
+	const char*	notice;
+};
+
+extern const SydneyPanel kSydneyPanels[];
+extern const int kSydneyPanelCount;	// 16: two rows of eight
 
 #endif	// STATION_H

@@ -2184,99 +2184,332 @@ BoardView::_DrawVictoria(int page, int64 now)
 // #pragma mark - Sydney Central
 
 
+static void
+format_wait(char* out, int size, int minutes)
+{
+	if (minutes <= 0)
+		snprintf(out, size, "Now");
+	else if (minutes < 60)
+		snprintf(out, size, "%d min", minutes);
+	else
+		snprintf(out, size, "%d hr %dm", minutes / 60, minutes % 60);
+}
+
+
+// A dark pill with white text: 8 cars, All Stops, Booked seats only.
+static float
+draw_pill(BView* v, const char* text, BPoint at, float height,
+	const BFont& base)
+{
+	BFont font(base);
+	font.SetSize(height * 0.72f);
+	float w = font.StringWidth(text) + height * 0.8f;
+	BRect r(at.x, at.y, at.x + w, at.y + height);
+	v->SetHighColor(50, 52, 56);
+	v->FillRoundRect(r, 2, 2);
+	font_height fh;
+	font.GetHeight(&fh);
+	v->SetFont(&font);
+	v->SetHighColor(255, 255, 255);
+	v->SetDrawingMode(B_OP_OVER);
+	v->DrawString(text, BPoint(at.x + height * 0.4f,
+		floorf(at.y + (height + fh.ascent - fh.descent) / 2)));
+	v->SetDrawingMode(B_OP_COPY);
+	return w;
+}
+
+
+// Words laid into lines no wider than `width`; '\n' breaks a line.
+static void
+draw_wrapped(BView* v, const char* text, BRect r, const BFont& font,
+	rgb_color color)
+{
+	font_height fh;
+	font.GetHeight(&fh);
+	float lineH = ceilf(fh.ascent + fh.descent + fh.leading) * 1.08f;
+	v->SetFont(&font);
+	v->SetHighColor(color);
+	v->SetDrawingMode(B_OP_OVER);
+	float y = r.top + fh.ascent;
+	BString line;
+	const char* s = text;
+	while (*s != '\0' && y < r.bottom) {
+		const char* end = s;
+		while (*end != '\0' && *end != ' ' && *end != '\n')
+			end++;
+		BString word(s, end - s);
+		BString candidate(line);
+		if (candidate.Length() > 0)
+			candidate << " ";
+		candidate << word;
+		if (line.Length() > 0 && font.StringWidth(candidate.String())
+				> r.Width()) {
+			v->DrawString(line.String(), BPoint(r.left, y));
+			y += lineH;
+			line = word;
+		} else
+			line = candidate;
+		if (*end == '\n') {
+			v->DrawString(line.String(), BPoint(r.left, y));
+			y += lineH;
+			line = "";
+		}
+		s = *end == '\0' ? end : end + 1;
+	}
+	if (line.Length() > 0 && y < r.bottom)
+		v->DrawString(line.String(), BPoint(r.left, y));
+	v->SetDrawingMode(B_OP_COPY);
+}
+
+
 void
 BoardView::_DrawSydney(int64 now)
 {
+	static const rgb_color kInk = { 28, 28, 30, 255 };
+	static const rgb_color kGreyInk = { 110, 110, 112, 255 };
+	static const rgb_color kOrange = { 233, 104, 45, 255 };
+	static const rgb_color kTeal = { 22, 150, 160, 255 };
+	static const rgb_color kPaper = { 244, 244, 242, 255 };
+
 	BView* v = fBoardView;
 	fBoard->Lock();
 	BRect bounds = v->Bounds();
 	float W = bounds.Width() + 1;
 	float H = bounds.Height() + 1;
-	float m = floorf(W * 0.012f);
-	v->SetHighColor(18, 20, 24);
+	v->SetHighColor(52, 54, 58);
 	v->FillRect(bounds);
-	_DrawStationHeader("Central", "Next departures", now,
-		make_color(30, 32, 36), make_color(247, 144, 30));
 
-	float bandH = floorf(H * 0.11f);
-	float labelH = floorf(H * 0.055f);
-	float fractions[5] = { 0.09f, 0.08f, 0.08f, 0.45f, 0.1f };
-	float xs[7];
-	xs[0] = m;
-	for (int i = 0; i < 5; i++)
-		xs[i + 1] = xs[i] + floorf(W * fractions[i]);
-	xs[6] = W - m;
-	static const char* kLabels[6] = { "Departs", "", "Line", "Destination",
-		"Cars", "Platform" };
-	for (int i = 0; i < 6; i++) {
-		_DrawIn(v, kLabels[i], BRect(xs[i], bandH, xs[i + 1] - 8,
-			bandH + labelH - 1), labelH * 0.5f, kLedDim,
-			i == 3 ? ALIGN_LEFT : ALIGN_CENTER, &fFallback);
-	}
-
-	const int kRows = 9;
-	float rowsTop = bandH + labelH;
-	float rowH = floorf((H - rowsTop - m) / kRows);
-	Slot slots[kRows];
-	int count = build_slots(kSydney, sizeof(SydneyService), kSydneyCount, now,
-		now, slots, kRows);
-	char buffer[64];
+	BFont bold(fFallback);
 	BFont regular(fFallback);
 	regular.SetFace(B_REGULAR_FACE);
-	for (int r = 0; r < count; r++) {
-		const SydneyService& service = kSydney[slots[r].service];
-		uint32 h = station_hash(slots[r].departs, slots[r].service);
-		float y = rowsTop + r * rowH;
-		v->SetHighColor(r % 2 == 0 ? make_color(26, 28, 33)
-			: make_color(20, 22, 26));
-		v->FillRect(BRect(0, y, W - 1, y + rowH - 2));
-		float pad = floorf(rowH * 0.18f);
 
-		snprintf(buffer, sizeof(buffer), "%d:%02d",
-			(int)(slots[r].departs % 1440 / 60), (int)(slots[r].departs % 60));
-		_DrawIn(v, buffer, BRect(xs[0], y, xs[1] - 8, y + rowH - 1),
-			rowH * 0.48f, kLedText, ALIGN_CENTER, &fFallback);
-		int left = (int)(slots[r].departs - now);
-		if (left <= 0)
-			snprintf(buffer, sizeof(buffer), "Now");
-		else
-			snprintf(buffer, sizeof(buffer), "%d min", left);
-		_DrawIn(v, buffer, BRect(xs[1], y, xs[2] - 8, y + rowH - 1),
-			rowH * 0.36f, make_color(255, 200, 60), ALIGN_CENTER, &fFallback);
+	// "Next departures", the information sign, and the clock in yellow.
+	float headH = floorf(H * 0.1f);
+	float m = floorf(W * 0.01f);
+	BRect info(m * 2, floorf(headH * 0.14f), m * 2 + floorf(headH * 0.72f),
+		floorf(headH * 0.86f));
+	v->SetHighColor(96, 98, 104);
+	v->FillRoundRect(info, 4, 4);
+	_DrawIn(v, "i", info, info.Height() * 0.9f, kLedText, ALIGN_CENTER,
+		&fFallback);
+	_DrawIn(v, "Next departures", BRect(info.right + m * 1.5f, 0, W * 0.6f,
+		headH), headH * 0.62f, kLedText, ALIGN_LEFT, &fFallback);
+	char buffer[64];
+	snprintf(buffer, sizeof(buffer), "%d:%02d", (int)(now % 1440 / 60),
+		(int)(now % 60));
+	_DrawIn(v, buffer, BRect(fGearRect.left - W * 0.15f, 0,
+		fGearRect.left - m, headH), headH * 0.66f, make_color(255, 214, 0),
+		ALIGN_RIGHT, &fFallback);
+	draw_gear(v, fGearRect, make_color(190, 190, 190), make_color(52, 54, 58));
 
-		rgb_color color = { service.color[0], service.color[1],
-			service.color[2], 255 };
-		float side = rowH - 2 * pad;
-		float bx = xs[2] + floorf((xs[3] - xs[2] - 8 - side) / 2);
-		BRect badge(bx, y + pad, bx + side, y + pad + side);
-		v->SetHighColor(color);
-		v->FillRoundRect(badge, side * 0.18f, side * 0.18f);
-		_DrawIn(v, service.line, badge.InsetByCopy(side * 0.08f, 0),
-			side * 0.5f, kLedText, ALIGN_CENTER, &fFallback);
+	// The tabs over the columns.
+	const int kColumns = 8;
+	float colW = floorf((W - m) / kColumns);
+	float tabTop = headH;
+	float tabH = floorf(H * 0.055f);
+	struct { int from, to; const char* name; rgb_color color; } tabs[] = {
+		{ 0, 4, "Sydney services", kOrange },
+		{ 5, 5, "Intercity & Events", kOrange },
+		{ 6, 6, "Regional services", kOrange },
+		{ 7, 7, "Metro", kTeal },
+	};
+	for (int t = 0; t < 4; t++) {
+		BRect tab(m + tabs[t].from * colW, tabTop, m + (tabs[t].to + 1) * colW
+			- 4, tabTop + tabH - 1);
+		v->SetHighColor(tabs[t].color);
+		v->FillRect(tab);
+		_DrawIn(v, tabs[t].name, tab.InsetByCopy(m, 0), tabH * 0.62f,
+			kLedText, ALIGN_LEFT, &fFallback);
+	}
 
-		_DrawIn(v, service.dest, BRect(xs[3], y + rowH * 0.04f, xs[4] - 8,
-			y + rowH * 0.6f), rowH * 0.46f, kLedText, ALIGN_LEFT, &fFallback);
-		BString detail(service.via);
-		if (detail.Length() > 0)
-			detail << "  ·  ";
-		detail << service.pattern;
-		_DrawIn(v, detail.String(), BRect(xs[3], y + rowH * 0.56f, xs[4] - 8,
-			y + rowH * 0.94f), rowH * 0.26f, kLedDim, ALIGN_LEFT, &regular);
+	// Two rows of portrait screens.
+	float gridTop = tabTop + tabH + floorf(m * 0.8f);
+	float panelH = floorf((H - gridTop - m) / 2) - floorf(m * 0.6f);
+	for (int i = 0; i < kSydneyPanelCount; i++) {
+		const SydneyPanel& panel = kSydneyPanels[i];
+		int col = i % kColumns;
+		int row = i / kColumns;
+		BRect r(m + col * colW, gridTop + row * (panelH + m * 1.2f),
+			m + (col + 1) * colW - 5, gridTop + row * (panelH + m * 1.2f)
+				+ panelH);
+		v->SetHighColor(kPaper);
+		v->FillRect(r);
+		float p = floorf(r.Width() * 0.06f);
+		float unit = floorf(panelH * 0.052f);	// one line of stations
+		rgb_color color = { panel.color[0], panel.color[1], panel.color[2],
+			255 };
 
-		snprintf(buffer, sizeof(buffer), "%d cars", service.cars);
-		_DrawIn(v, buffer, BRect(xs[4], y, xs[5] - 8, y + rowH - 1),
-			rowH * 0.32f, kLedText, ALIGN_CENTER, &regular);
+		if (panel.kind == PANEL_NOTICE) {
+			BFont font(bold);
+			font.SetSize(unit * 0.95f);
+			draw_wrapped(v, panel.notice, r.InsetByCopy(p, p), font, kInk);
+			continue;
+		}
 
-		int track = service.trackMin
-			+ (int)((h >> 16) % (service.trackMax - service.trackMin + 1));
-		BRect box(xs[5] + floorf((xs[6] - xs[5] - side * 1.2f) / 2), y + pad,
-			0, y + pad + side);
-		box.right = box.left + side * 1.2f;
-		v->SetHighColor(240, 240, 240);
-		v->FillRoundRect(box, 4, 4);
-		snprintf(buffer, sizeof(buffer), "%d", track);
-		_DrawIn(v, buffer, box.InsetByCopy(2, 0), side * 0.62f,
-			make_color(20, 22, 26), ALIGN_CENTER, &fFallback);
+		Slot slots[8];
+		int count = build_slots(panel.runs, sizeof(SydneyRun), panel.runCount,
+			now, now, slots, panel.kind == PANEL_CITY ? 7 : 3);
+		if (count == 0)
+			continue;
+		const SydneyRun& run = panel.runs[slots[0].service];
+		int wait = (int)(slots[0].departs - now);
+
+		// The head of the screen.
+		float y = r.top + p;
+		if (panel.kind == PANEL_CITY) {
+			BRect band(r.left + p * 0.6f, y, r.right - p * 0.6f,
+				y + unit * 1.5f);
+			v->SetHighColor(color);
+			v->FillRoundRect(band, 3, 3);
+			BFont font(bold);
+			font.SetSize(unit * 1.15f);
+			v->SetFont(&font);
+			v->SetHighColor(255, 255, 255);
+			v->SetDrawingMode(B_OP_OVER);
+			font_height fh;
+			font.GetHeight(&fh);
+			float base = floorf(band.top + (band.Height() + fh.ascent
+				- fh.descent) / 2);
+			v->DrawString("City", BPoint(band.left + p * 0.6f, base));
+			BFont small(regular);
+			small.SetSize(unit * 0.8f);
+			v->SetFont(&small);
+			v->DrawString(run.via, BPoint(band.left + p * 0.8f
+				+ font.StringWidth("City"), base));
+			v->SetDrawingMode(B_OP_COPY);
+			y = band.bottom + unit * 0.6f;
+		} else if (panel.kind == PANEL_LONG) {
+			float d = unit * 1.3f;
+			BPoint c(r.left + p + d / 2, y + d / 2);
+			v->SetHighColor(color);
+			v->FillEllipse(c, d / 2, d / 2);
+			_DrawIn(v, "T", BRect(c.x - d / 2, c.y - d / 2, c.x + d / 2,
+				c.y + d / 2), d * 0.75f, kLedText, ALIGN_CENTER, &bold);
+			snprintf(buffer, sizeof(buffer), "%02d:%02d",
+				(int)(slots[0].departs % 1440 / 60),
+				(int)(slots[0].departs % 60));
+			_DrawIn(v, buffer, BRect(c.x + d * 0.7f, y - unit * 0.1f, r.right - p,
+				y + d), unit * 1.3f, kInk, ALIGN_LEFT, &bold);
+			y += d + unit * 0.15f;
+			_DrawIn(v, run.dest, BRect(r.left + p, y, r.right - p,
+				y + unit * 1.3f), unit * 1.15f, kInk, ALIGN_LEFT, &bold);
+			y += unit * 1.3f;
+			if (run.via[0] != '\0') {
+				_DrawIn(v, run.via, BRect(r.left + p, y, r.right - p,
+					y + unit * 0.8f), unit * 0.7f, kInk, ALIGN_LEFT, &regular);
+				y += unit * 0.85f;
+			}
+			if (run.booked) {
+				draw_pill(v, "Booked seats only", BPoint(r.left + p, y + 2),
+					unit * 0.85f, bold);
+				y += unit;
+			}
+			y += unit * 0.4f;
+		} else {
+			float side = unit * 1.45f;
+			BRect badge(r.left + p * 0.6f, y, r.left + p * 0.6f + side,
+				y + side);
+			v->SetHighColor(color);
+			v->FillRect(badge);
+			_DrawIn(v, panel.line, badge.InsetByCopy(2, 0), side * 0.66f,
+				kLedText, ALIGN_CENTER, &bold);
+			float tx = badge.right + p * 0.5f;
+			_DrawIn(v, run.dest, BRect(tx, y - unit * 0.1f, r.right - p * 0.5f,
+				y + unit * 0.95f), unit * 1.05f, kInk, ALIGN_LEFT, &bold);
+			if (run.via[0] != '\0') {
+				_DrawIn(v, run.via, BRect(tx, y + unit * 0.9f,
+					r.right - p * 0.5f, y + side), unit * 0.62f, kInk,
+					ALIGN_LEFT, &regular);
+			}
+			y += side + unit * 0.6f;
+		}
+
+		// The stations, with the platform beside the first of them.
+		float stopsTop = y;
+		float stopsRight = r.right - p - unit * 1.8f;
+		BFont stopFont(regular);
+		const char* s = run.stops;
+		int lines = 0;
+		float limit = r.top + panelH * (panel.kind == PANEL_CITY ? 0.5f
+			: 0.66f);
+		while (*s != '\0' && y + unit <= limit) {
+			const char* end = strchr(s, '|');
+			if (end == NULL)
+				end = s + strlen(s);
+			BString name(s, end - s);
+			if (name.Length() > 0) {
+				_DrawIn(v, name.String(), BRect(r.left + p, y, stopsRight,
+					y + unit - 1), unit * 0.95f, kInk, ALIGN_LEFT, &stopFont);
+			}
+			y += unit;
+			lines++;
+			s = *end == '\0' ? end : end + 1;
+		}
+		_DrawIn(v, "Platform", BRect(stopsRight, stopsTop, r.right - p,
+			stopsTop + unit * 0.6f), unit * 0.5f, kInk, ALIGN_RIGHT, &regular);
+		snprintf(buffer, sizeof(buffer), "%d", run.platform);
+		_DrawIn(v, buffer, BRect(stopsRight - unit, stopsTop + unit * 0.5f,
+			r.right - p, stopsTop + unit * 2.1f), unit * 1.6f, kInk,
+			ALIGN_RIGHT, &regular);
+
+		// Cars, the stopping pattern and how long to wait.
+		float footTop = r.top + panelH * (panel.kind == PANEL_CITY ? 0.55f
+			: 0.7f);
+		float pillH = floorf(unit * 0.62f);
+		snprintf(buffer, sizeof(buffer), "%d cars", run.cars);
+		float pw = draw_pill(v, buffer, BPoint(r.left + p,
+			footTop + unit * 0.7f), pillH, bold);
+		if (panel.kind != PANEL_CITY) {
+			draw_pill(v, run.pattern, BPoint(r.left + p + pw + 4,
+				footTop + unit * 0.7f), pillH, bold);
+		}
+		if (panel.kind != PANEL_CITY) {
+			_DrawIn(v, "Departs", BRect(r.right - p - unit * 4, footTop - unit * 0.1f,
+				r.right - p, footTop + unit * 0.5f), unit * 0.48f, kInk,
+				ALIGN_RIGHT, &regular);
+			format_wait(buffer, sizeof(buffer), wait);
+			_DrawIn(v, buffer, BRect(r.right - p - unit * 4.5f,
+				footTop + unit * 0.35f, r.right - p, footTop + unit * 1.45f),
+				unit * 1.05f, kInk, ALIGN_RIGHT, &bold);
+		}
+
+		// Following services.
+		float listTop = footTop + unit * 1.7f;
+		v->SetHighColor(190, 190, 190);
+		v->StrokeLine(BPoint(r.left + p * 0.5f, listTop),
+			BPoint(r.right - p * 0.5f, listTop));
+		listTop += 3;
+		float platX = r.left + r.Width() * 0.62f;
+		_DrawIn(v, "Following Services", BRect(r.left + p, listTop,
+			platX - 4, listTop + unit * 0.55f), unit * 0.45f, kGreyInk,
+			ALIGN_LEFT, &regular);
+		_DrawIn(v, "Platform", BRect(platX - unit, listTop,
+			platX + unit * 0.8f, listTop + unit * 0.55f), unit * 0.45f,
+			kGreyInk, ALIGN_CENTER, &regular);
+		_DrawIn(v, "Departs", BRect(platX + unit, listTop, r.right - p,
+			listTop + unit * 0.55f), unit * 0.45f, kGreyInk, ALIGN_RIGHT,
+			&regular);
+		float ry = listTop + unit * 0.65f;
+		float rowH = panel.kind == PANEL_CITY ? unit * 0.95f : unit * 1.3f;
+		for (int k = 1; k < count && ry + rowH * 0.8f <= r.bottom; k++) {
+			const SydneyRun& next = panel.runs[slots[k].service];
+			const char* label = panel.kind == PANEL_CITY ? next.via : next.dest;
+			_DrawIn(v, label, BRect(r.left + p, ry, platX - unit, ry
+				+ unit * 0.8f), unit * 0.72f, kInk, ALIGN_LEFT, &regular);
+			snprintf(buffer, sizeof(buffer), "%d", next.platform);
+			_DrawIn(v, buffer, BRect(platX - unit, ry, platX + unit * 0.8f,
+				ry + unit * 0.8f), unit * 0.72f, kInk, ALIGN_CENTER, &regular);
+			format_wait(buffer, sizeof(buffer), (int)(slots[k].departs - now));
+			_DrawIn(v, buffer, BRect(platX + unit, ry, r.right - p,
+				ry + unit * 0.8f), unit * 0.72f, kInk, ALIGN_RIGHT, &regular);
+			if (panel.kind != PANEL_CITY && next.via[0] != '\0') {
+				_DrawIn(v, next.via, BRect(r.left + p, ry + unit * 0.72f,
+					platX - unit, ry + unit * 1.2f), unit * 0.42f, kGreyInk,
+					ALIGN_LEFT, &regular);
+			}
+			ry += rowH;
+		}
+		(void)lines;
 	}
 	v->Sync();
 	fBoard->Unlock();

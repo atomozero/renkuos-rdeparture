@@ -103,10 +103,13 @@ a page at a time when they do not fit, and the length of the train.
 
 ### Sydney Central
 
-Sydney Trains: departure time and minutes to go, the line (T1, T2, T4, T8, T9,
-Blue Mountains, Central Coast & Newcastle, South Coast) in its colour, the
-destination with its route and stopping pattern, the number of cars and the
-platform.
+The wall of portrait screens on the concourse, under orange tabs for Sydney
+services, Intercity & Events and Regional services and a teal one for Metro:
+a screen per line or platform with the line (T1, T2, T4, T8, T9, M1), the
+destination and route, the stations, the platform, the cars and stopping
+pattern and the minutes to the next train, then the following services. The
+City Circle screens list six trains; intercity and regional ones lead with the
+departure time and mark booked-seats-only trains; one screen is a notice.
 
 ![Sydney Central](docs/sydney.png)
 

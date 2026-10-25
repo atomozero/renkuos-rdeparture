@@ -378,34 +378,152 @@ const int kVictoriaCount = sizeof(kVictoria) / sizeof(kVictoria[0]);
 // #pragma mark - Sydney Central
 
 
-const SydneyService kSydney[] = {
-	{ T(30, 5, 300, 1440), "T1", C(247, 144, 30), "Emu Plains",
-		"via Parramatta", "Limited stops", 8, 16, 17 },
-	{ T(30, 20, 300, 1440), "T1", C(247, 144, 30), "Richmond",
-		"via Blacktown", "Limited stops", 8, 16, 17 },
-	{ T(15, 8, 300, 1440), "T1", C(247, 144, 30), "Hornsby", "via Gordon",
-		"All stations", 8, 18, 19 },
-	{ T(15, 11, 300, 1440), "T9", C(209, 31, 47), "Hornsby",
-		"via Strathfield", "Limited stops", 8, 16, 17 },
-	{ T(15, 4, 300, 1440), "T2", C(0, 152, 205), "Leppington",
-		"via Granville", "All stations", 8, 20, 21 },
-	{ T(30, 19, 300, 1440), "T2", C(0, 152, 205), "Parramatta",
-		"via Lidcombe", "All stations", 8, 20, 21 },
-	{ T(15, 6, 300, 1440), "T8", C(0, 149, 74), "Macarthur",
-		"via Airport", "Limited stops", 8, 22, 23 },
-	{ T(30, 21, 300, 1440), "T8", C(0, 149, 74), "Revesby",
-		"via Sydenham", "All stations", 8, 22, 23 },
-	{ T(10, 0, 300, 1440), "T4", C(0, 94, 184), "Bondi Junction", "",
-		"All stations", 8, 24, 25 },
-	{ T(15, 3, 300, 1440), "T4", C(0, 94, 184), "Cronulla",
-		"via Sydenham", "Limited stops", 8, 24, 25 },
-	{ T(15, 10, 300, 1440), "T4", C(0, 94, 184), "Waterfall",
-		"via Hurstville", "All stations", 8, 24, 25 },
-	{ T(60, 18, 300, 1380), "BMT", C(249, 157, 28), "Katoomba",
-		"via Penrith", "Limited stops", 8, 4, 12 },
-	{ T(60, 45, 300, 1380), "CCN", C(209, 31, 47), "Newcastle Interchange",
-		"via Gosford", "Limited stops", 8, 1, 3 },
-	{ T(60, 33, 300, 1380), "SCO", C(0, 152, 205), "Kiama",
-		"via Wollongong", "Limited stops", 8, 24, 25 },
+static const SydneyRun kGordon[] = {
+	{ T(15, 2, 300, 1440), "Gordon", "",
+		"Town Hall|Wynyard|Milsons Point|North Sydney|Chatswood|Gordon",
+		"Express", 8, 16, false },
+	{ T(30, 9, 300, 1440), "Berowra", "via Gordon",
+		"Town Hall|Wynyard|North Sydney|Chatswood|Gordon|Hornsby|Berowra",
+		"All Stops", 8, 16,
+		false },
+	{ T(30, 24, 300, 1440), "North Sydney", "",
+		"Town Hall|Wynyard|Milsons Point|North Sydney", "All Stops", 8, 16,
+		false },
 };
-const int kSydneyCount = sizeof(kSydney) / sizeof(kSydney[0]);
+static const SydneyRun kHornsby[] = {
+	{ T(15, 5, 300, 1440), "Hornsby", "via Strathfield",
+		"Pennant Hills|Thornleigh|Normanhurst|Hornsby||Redfern|Burwood|"
+		"Strathfield", "All Stops", 8, 18, false },
+};
+static const SydneyRun kEmuPlains[] = {
+	{ T(30, 4, 300, 1440), "Emu Plains", "via Parramatta",
+		"Werrington|Kingswood|Penrith|Emu Plains||Redfern|Strathfield|"
+		"Lidcombe|Parramatta", "Limited Stops", 8, 18, false },
+	{ T(30, 19, 300, 1440), "Richmond", "via Parramatta",
+		"Redfern|Strathfield|Lidcombe|Parramatta|Blacktown|Schofields|Windsor|"
+		"Richmond", "Limited Stops",
+		8, 18, false },
+	{ T(60, 34, 300, 1440), "Penrith", "via Parramatta",
+		"Redfern|Strathfield|Lidcombe|Parramatta|Blacktown|St Marys|Penrith",
+		"Limited Stops",
+		8, 18, false },
+};
+static const SydneyRun kMacarthur[] = {
+	{ T(15, 4, 300, 1440), "Macarthur", "via Airport stations",
+		"Campbelltown|Macarthur||Green Square|Mascot|Domestic|International|"
+		"Wolli Creek", "Limited Stops", 8, 22, false },
+	{ T(30, 7, 300, 1440), "Revesby", "via Airport stations",
+		"Green Square|Mascot|Domestic|International|Wolli Creek|Turrella|"
+		"Bardwell Park|Revesby", "All Stops", 8, 23, false },
+	{ T(30, 13, 300, 1440), "Sydenham", "",
+		"Redfern|Erskineville|St Peters|Sydenham", "All Stops", 8, 22, false },
+};
+static const SydneyRun kLeppington[] = {
+	{ T(15, 8, 300, 1440), "Leppington", "via Granville",
+		"Lidcombe|Granville|Liverpool|Leppington||Redfern|Macdonaldtown|"
+		"Newtown|Stanmore|Petersham", "All Stops", 8, 23, false },
+	{ T(30, 23, 300, 1440), "Homebush", "via Strathfield",
+		"Redfern|Newtown|Petersham|Ashfield|Burwood|Strathfield|Homebush",
+		"All Stops", 8,
+		23, false },
+};
+static const SydneyRun kNewcastle[] = {
+	{ T(60, 20, 300, 1380), "Newcastle Intg", "via Strathfield",
+		"Wyong|Warnervale|Wyee|Morisset|Dora Creek|Awaba|Fassifern|Booragul|"
+		"Teralba", "Limited Stops", 10, 9, false },
+};
+static const SydneyRun kBrisbane[] = {
+	{ T(1440, 0, 887, 887), "Brisbane", "",
+		"Broadmeadow|Maitland|Dungog|Gloucester|Wingham|Taree",
+		"Limited Stops", 8, 5, true },
+	{ T(1440, 0, 450, 450), "Grafton", "",
+		"Broadmeadow|Maitland|Dungog|Gloucester|Wingham|Taree|Kempsey|Grafton",
+		"Limited Stops", 8, 5, true },
+};
+static const SydneyRun kTallawong[] = {
+	{ T(4, 1, 300, 1440), "Tallawong", "",
+		"Martin Place|Barangaroo|Victoria Cross|Crows Nest|Chatswood|Epping|"
+		"Tallawong", "All Stops", 6, 26, false },
+};
+static const SydneyRun kBondi[] = {
+	{ T(10, 0, 300, 1440), "Bondi Jn", "",
+		"Town Hall|Martin Place|Kings Cross|Edgecliff|Bondi Jn", "All Stops",
+		8, 24, false },
+};
+static const SydneyRun kWaterfall[] = {
+	{ T(15, 10, 300, 1440), "Waterfall", "via Banksia",
+		"Allawah|Hurstville|Penshurst|Mortdale|Sutherland|Loftus|Engadine|"
+		"Heathcote|Waterfall", "Limited Stops", 8, 25, false },
+	{ T(15, 3, 300, 1440), "Cronulla", "via Kogarah",
+		"Tempe|Wolli Creek|Rockdale|Kogarah|Hurstville|Sutherland|Jannali|"
+		"Cronulla", "Limited Stops", 8,
+		25, false },
+};
+static const SydneyRun kViaMuseum[] = {
+	{ T(6, 0, 300, 1440), "City", "via Museum",
+		"Museum|St James|Circular Quay|Wynyard|Town Hall", "All Stops", 8, 20,
+		false },
+	{ T(6, 3, 300, 1440), "City", "via Museum",
+		"Museum|St James|Circular Quay|Wynyard|Town Hall", "All Stops", 8, 21,
+		false },
+};
+static const SydneyRun kViaTownHall[] = {
+	{ T(6, 1, 300, 1440), "City", "via Town Hall",
+		"Town Hall|Wynyard|Circular Quay|St James|Museum", "All Stops", 8, 17,
+		false },
+	{ T(6, 4, 300, 1440), "City", "via Town Hall",
+		"Town Hall|Wynyard|Circular Quay|St James|Museum", "All Stops", 8, 17,
+		false },
+};
+static const SydneyRun kBomaderry[] = {
+	{ T(120, 23, 300, 1380), "Bomaderry", "via Wolli Creek",
+		"Albion Park|Oak Flats|Shellharbour Jn|Minnamurra|Bombo|Kiama|"
+		"Gerringong|Berry", "Limited Stops", 4, 14, false },
+	{ T(120, 83, 300, 1380), "Kiama", "via Wolli Creek",
+		"Wolli Creek|Hurstville|Sutherland|Helensburgh|Thirroul|Wollongong|"
+		"Kiama", "Limited Stops",
+		4, 14, false },
+};
+static const SydneyRun kCanberra[] = {
+	{ T(1440, 0, 1036, 1036), "Canberra", "", "Bungendore|Queanbeyan|Canberra||"
+		"Mittagong|Bowral|Moss Vale", "Limited Stops", 4, 2, true },
+	{ T(1440, 0, 1209, 1209), "Melbourne", "",
+		"Campbelltown|Moss Vale|Goulburn|Wagga Wagga|Albury|Melbourne",
+		"Limited Stops", 8, 2,
+		true },
+	{ T(1440, 0, 465, 465), "Canberra", "", "Bungendore|Queanbeyan|Canberra||"
+		"Mittagong|Bowral|Moss Vale", "Limited Stops", 4, 2, true },
+};
+static const SydneyRun kSydenham[] = {
+	{ T(4, 3, 300, 1440), "Sydenham", "", "Waterloo|Sydenham", "All Stops", 6,
+		27, false },
+};
+
+#define RUNS(r) r, (int)(sizeof(r) / sizeof(r[0]))
+#define NO_RUNS NULL, 0
+
+// Row by row, eight to a row; the first five columns are Sydney services,
+// then Intercity & Events, Regional services and Metro.
+const SydneyPanel kSydneyPanels[] = {
+	{ PANEL_LINE, "T1", C(247, 144, 30), RUNS(kGordon), NULL },
+	{ PANEL_LINE, "T9", C(209, 31, 47), RUNS(kHornsby), NULL },
+	{ PANEL_LINE, "T1", C(247, 144, 30), RUNS(kEmuPlains), NULL },
+	{ PANEL_LINE, "T8", C(0, 149, 74), RUNS(kMacarthur), NULL },
+	{ PANEL_LINE, "T2", C(0, 152, 205), RUNS(kLeppington), NULL },
+	{ PANEL_LONG, "T", C(209, 31, 47), RUNS(kNewcastle), NULL },
+	{ PANEL_LONG, "T", C(209, 31, 47), RUNS(kBrisbane), NULL },
+	{ PANEL_LINE, "M1", C(22, 132, 147), RUNS(kTallawong), NULL },
+
+	{ PANEL_NOTICE, "", C(0, 0, 0), NO_RUNS,
+		"T6 Lidcombe & Bankstown Line\n\nFor customers travelling to Birrong, "
+		"Yagoona and Bankstown, catch a T1, T2 or T3 train to Lidcombe\n\n"
+		"Change at Lidcombe for T6 trains towards Bankstown" },
+	{ PANEL_LINE, "T4", C(0, 94, 184), RUNS(kBondi), NULL },
+	{ PANEL_LINE, "T4", C(0, 94, 184), RUNS(kWaterfall), NULL },
+	{ PANEL_CITY, "City", C(20, 20, 20), RUNS(kViaMuseum), NULL },
+	{ PANEL_CITY, "City", C(20, 20, 20), RUNS(kViaTownHall), NULL },
+	{ PANEL_LONG, "T", C(209, 31, 47), RUNS(kBomaderry), NULL },
+	{ PANEL_LONG, "T", C(209, 31, 47), RUNS(kCanberra), NULL },
+	{ PANEL_LINE, "M1", C(22, 132, 147), RUNS(kSydenham), NULL },
+};
+const int kSydneyPanelCount = sizeof(kSydneyPanels) / sizeof(kSydneyPanels[0]);
