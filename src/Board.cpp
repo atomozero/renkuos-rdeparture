@@ -56,6 +56,9 @@ static const rgb_color kColors[COLOR_COUNT] = {
 };
 
 static const char* kRattle = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+static const char* kRattleHangul = "가나다라마바사아자차카타파하";
+static const char* kRattleKana = "アイウエオカキクケコサシスセソ";
+static const char* kRattleHan = "東西南北中大小上下山川日月";
 
 // The columns of a row, in cells.
 static const int kColumnStart[] = { 0, 6, 12, 29, 39, 47, 52 };
@@ -852,12 +855,19 @@ BoardView::_SetField(int index, const char* text, int color, bigtime_t delay)
 	else if (field.align == ALIGN_CENTER)
 		offset = (field.count - used) / 2;
 
+	// What each cell should end up showing, and which character (unit) it
+	// is part of: the two cells of a Hangul or Han character flip together,
+	// through the same characters.
 	BBitmap* targets[128];
-	for (int i = 0; i < field.count; i++)
+	int unitOf[128];
+	for (int i = 0; i < field.count; i++) {
 		targets[i] = _Blank(field.sizeClass);
+		unitOf[i] = -1;
+	}
 	int at = offset;
 	for (int u = 0; u < fit; u++) {
 		for (int p = 0; p < units[u].width; p++) {
+			unitOf[at] = u;
 			targets[at++] = _Face(field.sizeClass, color, units[u].glyph,
 				units[u].width, p);
 		}
@@ -865,22 +875,53 @@ BoardView::_SetField(int index, const char* text, int color, bigtime_t delay)
 
 	bigtime_t now = system_time();
 	for (int i = 0; i < field.count; i++) {
-		Cell& cell = fCells[field.first + i];
-		BBitmap* last = cell.queued > 0 ? cell.queue[cell.queued - 1]
-			: cell.current;
-		if (targets[i] == last)
+		int width = unitOf[i] >= 0 ? units[unitOf[i]].width : 1;
+		bool changed = false;
+		for (int p = 0; p < width; p++) {
+			Cell& cell = fCells[field.first + i + p];
+			BBitmap* last = cell.queued > 0 ? cell.queue[cell.queued - 1]
+				: cell.current;
+			changed = changed || targets[i + p] != last;
+		}
+		if (!changed) {
+			i += width - 1;
 			continue;
-		BBitmap* rattle[4];
-		fRandom = fRandom * 1103515245 + 12345;
-		int n = 1 + (fRandom >> 16) % 3;
-		for (int k = 0; k < n; k++) {
-			fRandom = fRandom * 1103515245 + 12345;
-			char g[2] = { kRattle[(fRandom >> 16) % 36], '\0' };
-			rattle[k] = _Face(field.sizeClass, color, g, 1, 0);
+		}
+
+		// A mechanical flap passes through characters of its own kind:
+		// Latin letters for Latin, Hangul for Hangul, kana for kana.
+		const char* set = NULL;
+		if (unitOf[i] >= 0 && width == 2) {
+			const char* g = units[unitOf[i]].glyph;
+			uint32 c = utf8_code(g, utf8_length((uint8)g[0]));
+			set = c >= 0xac00 && c <= 0xd7a3 ? kRattleHangul
+				: c >= 0x3040 && c <= 0x30ff ? kRattleKana : kRattleHan;
 		}
 		fRandom = fRandom * 1103515245 + 12345;
-		_Enqueue(cell, targets[i], rattle, n,
-			now + delay + i * 18000 + (fRandom >> 16) % 90000);
+		int n = 1 + (fRandom >> 16) % 3;
+		char glyphs[4][8];
+		for (int k = 0; k < n; k++) {
+			fRandom = fRandom * 1103515245 + 12345;
+			if (set != NULL) {
+				// Every character in the set is three bytes of UTF-8.
+				int count = strlen(set) / 3;
+				memcpy(glyphs[k], set + ((fRandom >> 16) % count) * 3, 3);
+				glyphs[k][3] = '\0';
+			} else {
+				glyphs[k][0] = kRattle[(fRandom >> 16) % 36];
+				glyphs[k][1] = '\0';
+			}
+		}
+		fRandom = fRandom * 1103515245 + 12345;
+		bigtime_t start = now + delay + i * 18000 + (fRandom >> 16) % 90000;
+		for (int p = 0; p < width; p++) {
+			BBitmap* rattle[4];
+			for (int k = 0; k < n; k++)
+				rattle[k] = _Face(field.sizeClass, color, glyphs[k], width, p);
+			_Enqueue(fCells[field.first + i + p], targets[i + p], rattle, n,
+				start);
+		}
+		i += width - 1;
 	}
 }
 
