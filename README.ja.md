@@ -105,7 +105,7 @@ Events、Regional services) と青緑のタブ (Metro) の下に、路線・の�
 6 本、都市間・地方列車の画面は発車時刻を先に出し、全席指定の列車を示します。1 枚は
 お知らせの画面です。
 
-![シドニー・セントラル駅](docs/sydney.png)
+![シドニー・セントラル駅](docs/sydney-central-concourse.png)
 
 どの駅もその都市の現地時刻 (夏時間を含む) で動きます。
 

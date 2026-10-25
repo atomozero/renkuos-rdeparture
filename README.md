@@ -112,7 +112,7 @@ pattern and the minutes to the next train, then the following services. The
 City Circle screens list six trains; intercity and regional ones lead with the
 departure time and mark booked-seats-only trains; one screen is a notice.
 
-![Sydney Central](docs/sydney.png)
+![Sydney Central](docs/sydney-central-concourse.png)
 
 Each station keeps its own local time, summer time included.
 
