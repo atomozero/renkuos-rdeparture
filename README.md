@@ -4,7 +4,7 @@
 
 **English** | [日本語](README.ja.md) | [한국어](README.ko.md)
 
-An airport departures board for Haiku and RenkuOS, full screen and without a
+An airport departures board for RenkuOS (HaikuOS), full screen and without a
 window border -- and the train boards of Tokyo, Seoul, London Victoria and
 Sydney Central. Every character is a split flap: when something changes the
 flaps rattle through other letters and settle, row after row, and the airline
