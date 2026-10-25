@@ -3,7 +3,7 @@
 **English** | [日本語](README.ja.md) | [한국어](README.ko.md)
 
 An airport departures board for Haiku and RenkuOS, full screen and without a
-window border. Every character is a split flap: when something changes the
+window border -- and Tokyo Station's train boards. Every character is a split flap: when something changes the
 flaps rattle through other letters and settle, row after row, and the airline
 column is one flap per airline in its colours.
 
@@ -53,12 +53,35 @@ clock: check-in, gate open, boarding, final call, gate closed, departed.
 
 ![Flaps changing](docs/flipping.png)
 
+## Tokyo Station
+
+Tokyo Station, the last entry in the gear menu, is a JR station board rather
+than a flap board: the LED and LCD style above the platforms there, the
+departure time, destination, track in the line's colour, the train on the
+line's colour, and for each train which of the main stations it stops at (○)
+or passes (─). Four boards take turns every twelve seconds, each in Japanese
+and then English:
+
+- Tokaido Shinkansen: Nozomi, Hikari, Kodama, with the unreserved cars
+- Tohoku, Yamagata, Akita, Joetsu and Hokuriku Shinkansen: Hayabusa, Komachi,
+  Yamabiko, Nasuno, Tsubasa, Toki, Tanigawa, Kagayaki, Hakutaka, Asama
+- Tokaido Line, Ueno-Tokyo Line, Yokosuka Line (the platforms below ground)
+  and the Odoriko limited express
+- Chuo Line: Rapid, Chuo and Ome Special Rapid, Azusa and Kaiji
+
+Like the flights, the trains are a generated timetable of the real services,
+not live data.
+
+![Tokaido Shinkansen](docs/tokyo-shinkansen.png)
+![The Shinkansen to the north](docs/tokyo-north.png)
+![Tokaido, Ueno-Tokyo and Yokosuka lines, in English](docs/tokyo-tokaido-line.png)
+
 ## Keys
 
 | Key | |
 | --- | --- |
 | Esc, Q | quit |
-| Right arrow, space | next airport |
+| Right arrow, space | next airport (Tokyo Station after San Francisco) |
 | Left arrow | previous airport |
 
 The mouse pointer hides after three seconds.
@@ -87,7 +110,7 @@ running board first: a second launch is handed to it instead.
 ## Not affiliated
 
 Airline names and colours are used to make the board look like one; no logos
-are included, and nothing here is endorsed by any airline or airport.
+are included, and nothing here is endorsed by any airline, airport or railway.
 
 ## AI disclosure
 

@@ -16,7 +16,7 @@
 set -e
 
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
-SRCS="src/App.cpp src/Board.cpp src/Data.cpp"
+SRCS="src/App.cpp src/Board.cpp src/Data.cpp src/Station.cpp"
 FLAGS="-O2 -s -Wall -Wno-multichar -o RDepartures $SRCS"
 LIBS="-lbe -ltranslation"
 ARM64_CONTAINER="${ARM64_CONTAINER:-haiku-builder}"

@@ -4,12 +4,12 @@ NAME     = RDepartures
 CXX     ?= g++
 CXXFLAGS = -O2 -Wall -Wno-multichar
 LIBS     = -lbe -ltranslation
-SRCS     = src/App.cpp src/Board.cpp src/Data.cpp
+SRCS     = src/App.cpp src/Board.cpp src/Data.cpp src/Station.cpp
 
 APPS  = $(HOME)/config/non-packaged/apps
 FONTS = $(HOME)/config/non-packaged/data/fonts/otfonts
 
-$(NAME): $(SRCS) src/Board.h src/Data.h src/app.rdef
+$(NAME): $(SRCS) src/Board.h src/Data.h src/Station.h src/app.rdef
 	$(CXX) $(CXXFLAGS) -o $(NAME) $(SRCS) $(LIBS)
 	rc -o $(NAME).rsrc src/app.rdef
 	xres -o $(NAME) $(NAME).rsrc

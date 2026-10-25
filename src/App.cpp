@@ -7,10 +7,11 @@
  * For checking it without a screen (over ssh, say):
  *
  *   RDepartures --snapshot out.png [--size 1600x768] [--wait 4]
- *       [--airport ICN] [--phase 1] [--offset minutes]
+ *       [--airport ICN|TOKYO] [--phase 1] [--offset minutes]
  *
  * renders the board off-screen after --wait seconds of animation and saves
- * it. --phase fixes the language phase, --offset moves the clock.
+ * it. --phase fixes the language phase (for TOKYO, board * 2 + language),
+ * --offset moves the clock.
  *
  * Esc or Q quits, the arrow keys and space change the airport, the gear in
  * the top right corner picks one.
@@ -32,6 +33,7 @@
 
 #include "Board.h"
 #include "Data.h"
+#include "Station.h"
 
 
 static const char* kSignature = "application/x-vnd.rainygirl-RDepartures";
@@ -66,6 +68,8 @@ airport_index(const char* code)
 		if (strcasecmp(kAirports[i].code, code) == 0)
 			return i;
 	}
+	if (strcasecmp(kStationCode, code) == 0)
+		return kAirportCount;
 	return -1;
 }
 

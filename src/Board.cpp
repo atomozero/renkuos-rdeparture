@@ -12,6 +12,7 @@
  */
 
 #include "Board.h"
+#include "Station.h"
 
 #include <Application.h>
 #include <Bitmap.h>
@@ -76,6 +77,9 @@ static const char* kMenuNames[] = {
 	"New York JFK (JFK)",
 	"San Francisco (SFO)",
 };
+static const char* kStationMenuName = "Tokyo Station  東京駅 (JR)";
+static const bigtime_t kStationBoardLength = 12000000;
+static const bigtime_t kStationLangLength = 6000000;
 
 
 struct FaceEntry {
@@ -171,7 +175,11 @@ split_units(const char* text, Unit* units, int max)
 BoardView::BoardView(BRect frame, int airport)
 	:
 	BView(frame, "board", B_FOLLOW_ALL, B_WILL_DRAW | B_FRAME_EVENTS),
-	fAirport(airport),
+	fAirport(airport < kAirportCount ? airport : 0),
+	fStation(airport >= kAirportCount),
+	fStationBoard(-1),
+	fStationLang(-1),
+	fStationMinute(-1),
 	fPhase(0),
 	fFixedPhase(-1),
 	fFooter(0),
@@ -287,10 +295,10 @@ BoardView::KeyDown(const char* bytes, int32 numBytes)
 			break;
 		case B_RIGHT_ARROW:
 		case ' ':
-			SetAirport((fAirport + 1) % kAirportCount);
+			SetAirport((AirportIndex() + 1) % (kAirportCount + 1));
 			break;
 		case B_LEFT_ARROW:
-			SetAirport((fAirport + kAirportCount - 1) % kAirportCount);
+			SetAirport((AirportIndex() + kAirportCount) % (kAirportCount + 1));
 			break;
 		default:
 			BView::KeyDown(bytes, numBytes);
@@ -312,8 +320,17 @@ BoardView::Animating() const
 void
 BoardView::SetAirport(int index)
 {
-	if (index < 0 || index >= kAirportCount)
+	if (index < 0 || index > kAirportCount)
 		return;
+	fStation = index == kAirportCount;
+	fPhaseStart = system_time();
+	if (fStation) {
+		save_airport_setting(kStationCode);
+		fStationBoard = -1;
+		if (fBoard != NULL)
+			_TickStation(fPhaseStart);
+		return;
+	}
 	fAirport = index;
 	save_airport_setting(kAirports[index].code);
 	// The labels and the airport name are drawn, not flapped: redraw them,
@@ -588,6 +605,10 @@ BoardView::LayoutBoard(BRect bounds)
 		_Compose(fCells[i], now);
 	fPhaseStart = now;
 	_UpdateContent(true);
+	if (fStation) {
+		fStationBoard = -1;
+		_TickStation(now);
+	}
 }
 
 
@@ -1046,6 +1067,10 @@ BoardView::Tick()
 	if (fBoard == NULL)
 		return;
 	bigtime_t now = system_time();
+	if (fStation) {
+		_TickStation(now);
+		return;
+	}
 
 	if (fFixedPhase < 0 && now - fPhaseStart >= kPhaseLength) {
 		fPhase = (fPhase + 1) % kAirports[fAirport].phaseCount;
@@ -1344,11 +1369,16 @@ BoardView::_ShowMenu(BPoint where)
 		BMessage* message = new BMessage(MSG_SET_AIRPORT);
 		message->AddInt32("airport", i);
 		BMenuItem* item = new BMenuItem(kMenuNames[i], message);
-		item->SetMarked(i == fAirport);
+		item->SetMarked(!fStation && i == fAirport);
 		menu.AddItem(item);
 	}
-	// A line, then quitting, in the airport's language.
-	int lang = kAirports[fAirport].lang;
+	BMessage* station = new BMessage(MSG_SET_AIRPORT);
+	station->AddInt32("airport", kAirportCount);
+	BMenuItem* stationItem = new BMenuItem(kStationMenuName, station);
+	stationItem->SetMarked(fStation);
+	menu.AddItem(stationItem);
+	// A line, then quitting, in the board's language.
+	int lang = fStation ? LANG_JA : kAirports[fAirport].lang;
 	const char* quit = "Quit";
 	switch (lang) {
 		case LANG_KO: quit = "종료"; break;
@@ -1371,4 +1401,326 @@ BoardView::_ShowMenu(BPoint where)
 		if (message->FindInt32("airport", &index) == B_OK)
 			SetAirport(index);
 	}
+}
+
+
+// #pragma mark - Tokyo Station
+
+
+static const rgb_color kLedBackground = { 6, 6, 8, 255 };
+static const rgb_color kLedText = { 238, 238, 232, 255 };
+static const rgb_color kLedDim = { 150, 150, 146, 255 };
+static const rgb_color kLedRule = { 44, 44, 48, 255 };
+static const rgb_color kLedAmber = { 255, 170, 40, 255 };
+
+
+// Text fitted into a rectangle: shrunk to its width, centred on its height.
+void
+BoardView::_DrawIn(BView* view, const char* text, BRect r, float size,
+	rgb_color color, int align)
+{
+	if (text == NULL || text[0] == '\0')
+		return;
+	BFont font(font_for(text, fMain, fFallback, fCJK));
+	font.SetSize(size);
+	float w = font.StringWidth(text);
+	float room = r.Width() + 1;
+	if (w > room) {
+		font.SetSize(size * room / w);
+		w = font.StringWidth(text);
+	}
+	font_height fh;
+	font.GetHeight(&fh);
+	float x = r.left;
+	if (align == ALIGN_CENTER)
+		x = r.left + floorf((room - w) / 2);
+	else if (align == ALIGN_RIGHT)
+		x = r.right + 1 - w;
+	float y = floorf(r.top + (r.Height() + 1 + fh.ascent - fh.descent) / 2);
+	view->SetFont(&font);
+	view->SetHighColor(color);
+	view->SetDrawingMode(B_OP_OVER);
+	view->DrawString(text, BPoint(x, y));
+	view->SetDrawingMode(B_OP_COPY);
+}
+
+
+void
+BoardView::_TickStation(bigtime_t now)
+{
+	int board;
+	int lang;
+	if (fFixedPhase >= 0) {
+		board = (fFixedPhase / 2) % kStationBoardCount;
+		lang = fFixedPhase % 2;
+	} else {
+		bigtime_t elapsed = now - fPhaseStart;
+		board = (int)(elapsed / kStationBoardLength) % kStationBoardCount;
+		lang = (int)(elapsed / kStationLangLength) % 2;
+	}
+
+	// Tokyo time, from Narita's clock.
+	int narita = 0;
+	for (int i = 0; i < kAirportCount; i++) {
+		if (strcmp(kAirports[i].code, "NRT") == 0)
+			narita = i;
+	}
+	int64 minute = airport_local_minutes(kAirports[narita],
+		time(NULL) + gTimeOffset);
+
+	if (board != fStationBoard || lang != fStationLang
+		|| minute != fStationMinute) {
+		fStationBoard = board;
+		fStationLang = lang;
+		fStationMinute = minute;
+		_DrawStation(board, lang, minute);
+		if (Window() != NULL)
+			Invalidate();
+	}
+
+	if (Window() != NULL && now - fLastMouse > 3000000) {
+		be_app->ObscureCursor();
+		fLastMouse = now + 3600000000LL;
+	}
+}
+
+
+// One board, drawn whole: these boards change line by line, they do not
+// flap.
+void
+BoardView::_DrawStation(int boardIndex, int lang, int64 now)
+{
+	const StationBoard& board = kStationBoards[boardIndex];
+	bool english = lang == 1;
+	BView* v = fBoardView;
+	fBoard->Lock();
+	BRect bounds = v->Bounds();
+	float W = bounds.Width() + 1;
+	float H = bounds.Height() + 1;
+	v->SetHighColor(kLedBackground);
+	v->FillRect(bounds);
+
+	float m = floorf(W * 0.012f);
+	float header = floorf(H * 0.24f);
+	float labelH = floorf(H * 0.05f);
+	float lineH = floorf(H * 0.045f);
+
+	// Which board, and which way.
+	BString line;
+	if (english)
+		line << board.titleEn << "  " << board.directionEn;
+	else
+		line << board.titleJp << "　" << board.directionJp;
+	_DrawIn(v, line.String(), BRect(m, m, W * 0.5f, m + lineH - 1),
+		lineH * 0.78f, kLedDim, ALIGN_LEFT);
+
+	// Clock, and what the board is.
+	float top = m + lineH + floorf(m * 0.5f);
+	float bottom = header - labelH - floorf(m * 0.5f);
+	BRect clock(m, top, m + floorf(W * 0.1f), bottom);
+	v->SetHighColor(30, 30, 34);
+	v->FillRoundRect(clock, 4, 4);
+	char buffer[64];
+	snprintf(buffer, sizeof(buffer), "%02d:%02d", (int)(now % 1440 / 60),
+		(int)(now % 60));
+	_DrawIn(v, buffer, clock.InsetByCopy(6, 2), clock.Height() * 0.8f,
+		kLedText, ALIGN_CENTER);
+	float titleLeft = clock.right + m * 1.5f;
+	float titleH = bottom - top + 1;
+	_DrawIn(v, "発車時刻・のりば案内",
+		BRect(titleLeft, top, W * 0.5f, top + titleH * 0.6f), titleH * 0.5f,
+		kLedText, ALIGN_LEFT);
+	_DrawIn(v, "Departure Time & Track Information",
+		BRect(titleLeft, top + titleH * 0.6f, W * 0.5f, bottom),
+		titleH * 0.3f, kLedDim, ALIGN_LEFT);
+
+	draw_gear(v, fGearRect, make_color(150, 150, 150), kLedBackground);
+
+	// Columns.
+	float x = m;
+	float timeX = x;
+	float timeW = floorf(W * 0.08f);
+	x += timeW;
+	float destX = x;
+	float destW = floorf(W * (board.stationCount > 0 ? 0.13f : 0.16f));
+	x += destW;
+	float trackX = x;
+	float trackW = floorf(W * 0.075f);
+	x += trackW + floorf(m * 0.5f);
+	float originX = x;
+	float originW = floorf(W * 0.045f);
+	x += originW;
+	float trainX = x;
+	float trainW = floorf(W * (board.stationCount > 0 ? 0.17f : 0.2f));
+	x += trainW + m;
+	float carsX = x;
+	float carsW = board.shinkansen ? floorf(W * 0.085f) : 0;
+	x += carsW;
+	float patternX = x;
+	float tagW = board.stationCount > 0 ? floorf(W * 0.022f) : 0;
+	float columnsX = patternX + tagW + floorf(m * 0.5f);
+	float patternRight = W - m;
+	float colW = board.stationCount > 0
+		? floorf((patternRight - columnsX) / board.stationCount) : 0;
+
+	// Column labels, Japanese over English as on the boards.
+	float labelTop = header - labelH;
+	struct { float x, w; const char* jp; const char* en; } labels[] = {
+		{ timeX, timeW, "時刻", "Time" },
+		{ destX, destW, "行先", "Destination" },
+		{ trackX, trackW, "のりば", "Track" },
+		{ trainX, trainW, "種別・列車名", "Train" },
+		{ carsX, carsW, "自由席", "Non-reserved" },
+	};
+	for (int i = 0; i < 5; i++) {
+		if (labels[i].w <= 0)
+			continue;
+		BRect r(labels[i].x, labelTop, labels[i].x + labels[i].w - 4,
+			labelTop + labelH * 0.55f);
+		_DrawIn(v, labels[i].jp, r, labelH * 0.5f, kLedDim, ALIGN_CENTER);
+		r.OffsetBy(0, labelH * 0.5f);
+		_DrawIn(v, labels[i].en, r, labelH * 0.38f, kLedDim, ALIGN_CENTER);
+	}
+
+	// The stations the pattern columns stand for, written downwards, and
+	// the yellow tag that says so.
+	if (board.stationCount > 0) {
+		float namesTop = fGearRect.bottom + floorf(m * 0.5f);
+		float namesBottom = header - 3;
+		BRect tag(patternX, namesTop, patternX + tagW - 2, namesBottom);
+		v->SetHighColor(240, 200, 30);
+		v->FillRoundRect(tag, 3, 3);
+		const char* tagText[] = { "主", "な", "停", "車", "駅" };
+		float th = (tag.Height() + 1) / 5;
+		for (int i = 0; i < 5; i++) {
+			_DrawIn(v, tagText[i], BRect(tag.left, tag.top + i * th, tag.right,
+				tag.top + (i + 1) * th - 1), th * 0.8f, make_color(20, 20, 20),
+				ALIGN_CENTER);
+		}
+		for (int s = 0; s < board.stationCount; s++) {
+			Unit units[8];
+			int n = split_units(board.stationsJp[s], units, 8);
+			float ch = (namesBottom - namesTop + 1) / 4;
+			if (ch > colW * 0.8f)
+				ch = floorf(colW * 0.8f);
+			float cx = columnsX + s * colW;
+			for (int k = 0; k < n; k++) {
+				_DrawIn(v, units[k].glyph, BRect(cx, namesTop + k * ch,
+					cx + colW - 1, namesTop + (k + 1) * ch - 1), ch * 0.9f,
+					kLedText, ALIGN_CENTER);
+			}
+		}
+	}
+
+	v->SetHighColor(kLedRule);
+	v->StrokeLine(BPoint(m, header), BPoint(W - m, header));
+
+	// The trains.
+	const int kRows = 10;
+	float rowsTop = header + 2;
+	float rowH = floorf((H - rowsTop - m) / kRows);
+	Train trains[kRows];
+	int count = build_trains(board, boardIndex, now, trains, kRows);
+	for (int r = 0; r < count; r++) {
+		const Train& train = trains[r];
+		const Service& service = *train.service;
+		rgb_color color = { service.color[0], service.color[1],
+			service.color[2], 255 };
+		float y = rowsTop + r * rowH;
+		BRect row(m, y, W - m, y + rowH - 1);
+		float pad = floorf(rowH * 0.1f);
+
+		snprintf(buffer, sizeof(buffer), "%d:%02d",
+			(int)(train.departs % 1440 / 60), (int)(train.departs % 60));
+		_DrawIn(v, buffer, BRect(timeX, y, timeX + timeW - 6, y + rowH - 1),
+			rowH * 0.66f, kLedText, ALIGN_RIGHT);
+		_DrawIn(v, english ? service.destEn : service.destJp,
+			BRect(destX + m * 0.6f, y, destX + destW - 4, y + rowH - 1),
+			rowH * 0.62f, kLedText, ALIGN_LEFT);
+
+		// Track: a box in the line's colour, the number, and 番線.
+		BRect box(trackX, y + pad, trackX + trackW - 4, y + rowH - 1 - pad);
+		v->SetHighColor(color);
+		v->FillRect(box);
+		// The Sobu/Yokosuka platforms are below ground: 地下1番線, B1.
+		float left = box.left + 2;
+		if (service.underground && !english) {
+			float w = box.Width() * 0.24f;
+			_DrawIn(v, "地下", BRect(left, box.top + box.Height() * 0.45f,
+				left + w, box.bottom - 1), box.Height() * 0.4f, kLedText,
+				ALIGN_LEFT);
+			left += w + 2;
+		}
+		snprintf(buffer, sizeof(buffer), service.underground && english
+			? "B%d" : "%d", train.track);
+		float numW = box.Width() * (service.underground ? 0.62f : 0.55f);
+		_DrawIn(v, buffer, BRect(left, box.top, box.left + numW, box.bottom),
+			box.Height() * 0.95f, kLedText, ALIGN_RIGHT);
+		_DrawIn(v, english ? "Track" : "番線", BRect(box.left + numW + 3,
+			box.top + box.Height() * 0.45f, box.right - 2, box.bottom - 1),
+			box.Height() * 0.4f, kLedText, ALIGN_LEFT);
+
+		if (train.startsHere) {
+			_DrawIn(v, english ? "Orig." : "始発", BRect(originX, y,
+				originX + originW - 4, y + rowH - 1), rowH * 0.5f, kLedText,
+				ALIGN_CENTER);
+		}
+
+		// Train: the name on the line's colour, with its number.
+		BRect name(trainX, y + pad, trainX + trainW - 1, y + rowH - 1 - pad);
+		v->SetHighColor(color);
+		v->FillRect(name);
+		BString label(english ? service.typeEn : service.typeJp);
+		if (train.number > 0) {
+			if (english)
+				label << " " << train.number;
+			else
+				label << " " << train.number << "号";
+		}
+		_DrawIn(v, label.String(), name.InsetByCopy(6, 0), name.Height() * 0.8f,
+			kLedText, ALIGN_CENTER);
+
+		if (board.shinkansen) {
+			BRect cars(carsX, y, carsX + carsW - 4, y + rowH - 1);
+			if (service.unreserved != NULL) {
+				BString text;
+				if (english)
+					text << "Cars " << service.unreserved;
+				else
+					text << service.unreserved << "号車";
+				_DrawIn(v, text.String(), cars, rowH * 0.5f, kLedText,
+					ALIGN_CENTER);
+			} else {
+				_DrawIn(v, english ? "All reserved" : "全車指定", cars,
+					rowH * 0.48f, kLedAmber, ALIGN_CENTER);
+			}
+		}
+
+		if (board.stationCount > 0) {
+			// ○ stops, ─ passes, nothing beyond where it goes.
+			float d = floorf((colW < rowH ? colW : rowH) * 0.52f);
+			v->SetPenSize(floorf(d * 0.13f) > 2 ? floorf(d * 0.13f) : 2);
+			v->SetHighColor(color);
+			int n = strlen(service.stops);
+			for (int s = 0; s < board.stationCount && s < n; s++) {
+				BPoint c(columnsX + s * colW + colW / 2, y + rowH / 2);
+				if (service.stops[s] == 'o')
+					v->StrokeEllipse(c, d / 2, d / 2);
+				else if (service.stops[s] == '-') {
+					v->StrokeLine(BPoint(c.x - d * 0.35f, c.y),
+						BPoint(c.x + d * 0.35f, c.y));
+				}
+			}
+			v->SetPenSize(1);
+		} else {
+			_DrawIn(v, english ? service.stopsEn : service.stops,
+				BRect(patternX, y, patternRight, y + rowH - 1), rowH * 0.42f,
+				kLedDim, ALIGN_LEFT);
+		}
+
+		v->SetHighColor(kLedRule);
+		v->StrokeLine(BPoint(m, row.bottom), BPoint(W - m, row.bottom));
+	}
+	v->Sync();
+	fBoard->Unlock();
 }
