@@ -82,7 +82,7 @@ static int
 saved_airport()
 {
 	BFile file(settings_path().Path(), B_READ_ONLY);
-	char code[8] = { 0 };
+	char code[16] = { 0 };
 	if (file.InitCheck() != B_OK || file.Read(code, sizeof(code) - 1) <= 0)
 		return 0;
 	int index = airport_index(code);

@@ -6,6 +6,7 @@
 #define BOARD_H
 
 #include <Font.h>
+#include <Region.h>
 #include <String.h>
 #include <View.h>
 
@@ -71,6 +72,11 @@ struct Field {
 struct FaceEntry;
 
 
+// The menu name of an airport (0 .. kAirportCount - 1) or a station after
+// them.
+const char*	board_name(int index);
+
+
 class BoardView : public BView {
 public:
 							BoardView(BRect frame, int airport);
@@ -96,6 +102,11 @@ public:
 									? kAirportCount + fStation : fAirport; }
 			void			SetFixedPhase(int phase) { fFixedPhase = phase; }
 			BBitmap*		Bitmap() const { return fBoard; }
+			// What changed in Bitmap() since the last call: without a
+			// window there is nothing to invalidate, so it is kept here.
+			void			TakeDirty(BRegion& into);
+			// No gear for a screen saver: it cannot be clicked.
+			void			SetShowGear(bool show) { fShowGear = show; }
 			bool			Animating() const;
 
 private:
@@ -136,6 +147,9 @@ private:
 			void			_DrawStationHeader(const char* title,
 								const char* subtitle, int64 now,
 								rgb_color band, rgb_color accent);
+			void			_DrawGear(BView* view, rgb_color color,
+								rgb_color background);
+			void			_Invalidate(const BRegion* region = NULL);
 			void			_DrawIn(BView* view, const char* text, BRect r,
 								float size, rgb_color color, int align,
 								const BFont* latin = NULL);
@@ -167,6 +181,8 @@ private:
 			bigtime_t		fPhaseStart;
 			bigtime_t		fLastUpdate;
 			bigtime_t		fLastMouse;
+			BRegion			fPending;
+			bool			fShowGear;
 			BMessageRunner*	fRunner;
 
 			BBitmap*		fBoard;

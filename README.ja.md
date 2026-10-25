@@ -2,7 +2,7 @@
 
 <img src="docs/icon.png" width="64" alt="">
 
-[English](README.md) | **日本語** | [한국어](README.ko.md)
+[English](README.md) | **日本語** | [한국어](README.ko.md) | [Italiano](README.it.md)
 
 RenkuOS (HaikuOS) 用の空港出発案内板です。ウィンドウ枠なしの全画面で表示します。
 東京駅、ソウル駅、ロンドン・ヴィクトリア駅、シドニー・セントラル駅の列車案内もあります。
@@ -26,6 +26,9 @@ pkgman install rdepartures
 **Deskbar -> Applications** から **R Departures** を起動します。フラップの
 フォント (TeX Gyre Heros Condensed Bold) もパッケージが一緒にインストールします。
 
+同じ案内板はスクリーンセーバーとしても使えます:
+[R Departures スクリーンセーバー](https://github.com/rainygirl/rdepartures-screensaver) (`pkgman install rdepartures_screensaver`)。
+
 `pkgman add-repo` が `Operation not supported` で失敗する場合、そのイメージの
 ネットワークキットには TLS がありません。`https://` の代わりに `http://` を
 使ってください。
@@ -33,7 +36,8 @@ pkgman install rdepartures
 ## 空港
 
 仁川 (ICN)、成田 (NRT)、香港 (HKG)、ヒースロー (LHR)、シャルル・ド・ゴール (CDG)、
-ミラノ・マルペンサ (MXP)、ニューヨーク JFK (JFK)、サンフランシスコ (SFO)。
+ミラノ・マルペンサ (MXP)、ヴェネツィア・マルコ・ポーロ (VCE)、ニューヨーク JFK (JFK)、
+サンフランシスコ (SFO)。
 右上の歯車から選ぶと、次に起動したときもその空港で始まります。
 
 案内板はその空港の現地時刻 (夏時間を含む) で動き、8 秒ごとに言語が変わります。
@@ -46,6 +50,7 @@ pkgman install rdepartures
 ![成田、行先の言語](docs/narita-destinations.png)
 ![香港](docs/hongkong.png)
 ![パリ](docs/paris.png)
+![ヴェネツィア](docs/venice.png)
 
 便は実在の路線に、もっともらしい便名・ゲート・時刻を付けたものです。時刻表は毎日
 同じように作られ、いくつかの遅延と欠航は日付で決まります。リアルタイムのデータでは
@@ -105,7 +110,9 @@ Events、Regional services) と青緑のタブ (Metro) の下に、路線・の�
 路線記号 (T1、T2、T4、T8、T9、M1)、行先と経由地、停車駅、のりば、両数と停車パターン、
 次の列車までの分数、続く列車 (Following Services) を表示します。City 循環線の画面は
 6 本、都市間・地方列車の画面は発車時刻を先に出し、全席指定の列車を示します。1 枚は
-お知らせの画面です。
+お知らせの画面です。入りきらない停車駅は、最後の駅が見えるまで上へ流れ、また先頭から
+始まります。16:9 より横長の画面では縦長の画面が 1 列に並び、Sydney services は 4 枚に
+なります。
 
 ![シドニー・セントラル駅](docs/sydney-central-concourse.png)
 

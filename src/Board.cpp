@@ -74,9 +74,21 @@ static const char* kMenuNames[] = {
 	"London Heathrow (LHR)",
 	"Paris Charles de Gaulle (CDG)",
 	"Milano Malpensa (MXP)",
+	"Venezia Marco Polo (VCE)",
 	"New York JFK (JFK)",
 	"San Francisco (SFO)",
 };
+
+
+const char*
+board_name(int index)
+{
+	if (index < kAirportCount)
+		return kMenuNames[index];
+	return kStations[index - kAirportCount].menuName;
+}
+
+
 static const bigtime_t kStationBoardLength = 12000000;
 static const bigtime_t kStationLangLength = 6000000;
 
@@ -186,6 +198,7 @@ BoardView::BoardView(BRect frame, int airport)
 	fPhaseStart(0),
 	fLastUpdate(0),
 	fLastMouse(0),
+	fShowGear(true),
 	fRunner(NULL),
 	fBoard(NULL),
 	fBoardView(NULL),
@@ -344,8 +357,7 @@ BoardView::SetAirport(int index)
 		for (int i = 0; i < fCellCount; i++)
 			_Compose(fCells[i], fPhaseStart);
 		_UpdateContent(true);
-		if (Window() != NULL)
-			Invalidate();
+		_Invalidate();
 	}
 }
 
@@ -497,6 +509,7 @@ BoardView::LayoutBoard(BRect bounds)
 	_FreeLayout();
 	_ClearCache();
 	fBounds = bounds;
+	fPending.Set(bounds);
 	int width = bounds.IntegerWidth() + 1;
 	int height = bounds.IntegerHeight() + 1;
 
@@ -1111,9 +1124,9 @@ BoardView::Tick()
 			be_app->ObscureCursor();
 			fLastMouse = now + 3600000000LL;
 		}
-		if (dirty.CountRects() > 0)
-			Invalidate(&dirty);
 	}
+	if (dirty.CountRects() > 0)
+		_Invalidate(&dirty);
 }
 
 
@@ -1297,6 +1310,38 @@ draw_gear(BView* view, BRect box, rgb_color color, rgb_color background)
 
 
 void
+BoardView::_DrawGear(BView* view, rgb_color color, rgb_color background)
+{
+	if (fShowGear)
+		draw_gear(view, fGearRect, color, background);
+}
+
+
+void
+BoardView::_Invalidate(const BRegion* region)
+{
+	if (region != NULL)
+		fPending.Include(region);
+	else if (fBoard != NULL)
+		fPending.Include(fBoard->Bounds());
+	if (Window() == NULL)
+		return;
+	if (region != NULL)
+		Invalidate(region);
+	else
+		Invalidate();
+}
+
+
+void
+BoardView::TakeDirty(BRegion& into)
+{
+	into = fPending;
+	fPending.MakeEmpty();
+}
+
+
+void
 BoardView::_DrawStatic()
 {
 	const Airport& airport = kAirports[fAirport];
@@ -1338,7 +1383,7 @@ BoardView::_DrawStatic()
 			fMain, fFallback, fCJK);
 	}
 
-	draw_gear(v, fGearRect, make_color(150, 150, 150), kHeader);
+	_DrawGear(v, make_color(150, 150, 150), kHeader);
 
 	// Column labels: the airport's language above English, as at Narita.
 	float rh = fCellHeight[SIZE_ROW];
@@ -1369,7 +1414,7 @@ BoardView::_ShowMenu(BPoint where)
 	for (int i = 0; i < kAirportCount; i++) {
 		BMessage* message = new BMessage(MSG_SET_AIRPORT);
 		message->AddInt32("airport", i);
-		BMenuItem* item = new BMenuItem(kMenuNames[i], message);
+		BMenuItem* item = new BMenuItem(board_name(i), message);
 		item->SetMarked(fStation < 0 && i == fAirport);
 		menu.AddItem(item);
 	}
@@ -1499,8 +1544,7 @@ BoardView::_TickStation(bigtime_t now)
 				_DrawSydney(minute);
 				break;
 		}
-		if (Window() != NULL)
-			Invalidate();
+		_Invalidate();
 	}
 	if (station.style == STYLE_KORAIL || station.style == STYLE_SYDNEY)
 		_DrawMarquees(now);
@@ -1561,7 +1605,7 @@ BoardView::_DrawStation(int boardIndex, int lang, int64 now)
 		BRect(titleLeft, top + titleH * 0.6f, W * 0.5f, bottom),
 		titleH * 0.3f, kLedDim, ALIGN_LEFT);
 
-	draw_gear(v, fGearRect, make_color(150, 150, 150), kLedBackground);
+	_DrawGear(v, make_color(150, 150, 150), kLedBackground);
 
 	// Columns.
 	float x = m;
@@ -1792,7 +1836,7 @@ BoardView::_DrawStationHeader(const char* title, const char* subtitle,
 		(int)(now % 60));
 	_DrawIn(v, clock, BRect(fGearRect.left - W * 0.13f, 0, fGearRect.left - m,
 		bandH - 6), bandH * 0.5f, kLedText, ALIGN_RIGHT, &fFallback);
-	draw_gear(v, fGearRect, make_color(170, 170, 170), band);
+	_DrawGear(v, make_color(170, 170, 170), band);
 }
 
 
@@ -2056,7 +2100,7 @@ BoardView::_DrawVictoria(int page, int64 now)
 	_DrawIn(v, buffer, BRect(fGearRect.left - W * 0.12f, 0,
 		fGearRect.left - m, bannerH - 1), bannerH * 0.5f, kLedText,
 		ALIGN_RIGHT, &fFallback);
-	draw_gear(v, fGearRect, make_color(200, 200, 200), make_color(64, 68, 74));
+	_DrawGear(v, make_color(200, 200, 200), make_color(64, 68, 74));
 
 	const int kColumns = 8;
 	Slot slots[kColumns];
@@ -2328,7 +2372,7 @@ BoardView::_DrawSydney(int64 now)
 	_DrawIn(v, buffer, BRect(fGearRect.left - W * 0.15f, 0,
 		fGearRect.left - m, headH), headH * 0.66f, make_color(255, 214, 0),
 		ALIGN_RIGHT, &fFallback);
-	draw_gear(v, fGearRect, make_color(190, 190, 190), make_color(52, 54, 58));
+	_DrawGear(v, make_color(190, 190, 190), make_color(52, 54, 58));
 
 	// The tabs over the columns. A screen wider than 16:9 has one row of
 	// taller screens, and Sydney services loses its fifth column.
@@ -2631,8 +2675,7 @@ BoardView::_DrawMarquees(bigtime_t now)
 	}
 	v->Sync();
 	fBoard->Unlock();
-	if (Window() != NULL)
-		Invalidate(&dirty);
+	_Invalidate(&dirty);
 }
 
 

@@ -2,7 +2,7 @@
 
 <img src="docs/icon.png" width="64" alt="">
 
-**English** | [日本語](README.ja.md) | [한국어](README.ko.md)
+**English** | [日本語](README.ja.md) | [한국어](README.ko.md) | [Italiano](README.it.md)
 
 An airport departures board for RenkuOS (HaikuOS), full screen and without a
 window border -- and the train boards of Tokyo, Seoul, London Victoria and
@@ -27,14 +27,17 @@ pkgman install rdepartures
 Then start **R Departures** from **Deskbar -> Applications**. The package also
 installs the flap font, TeX Gyre Heros Condensed Bold.
 
+The same boards are also a screen saver:
+[R Departures screen saver](https://github.com/rainygirl/rdepartures-screensaver) (`pkgman install rdepartures_screensaver`).
+
 If `pkgman add-repo` fails with `Operation not supported`, the network kit of
 that image has no TLS; use `http://` instead of `https://`.
 
 ## Airports
 
 Seoul Incheon (ICN), Tokyo Narita (NRT), Hong Kong (HKG), London Heathrow
-(LHR), Paris Charles de Gaulle (CDG), Milan Malpensa (MXP), New York JFK (JFK) and San Francisco
-(SFO). Pick one with the gear in the top right corner; the board remembers it.
+(LHR), Paris Charles de Gaulle (CDG), Milan Malpensa (MXP), Venice Marco Polo
+(VCE), New York JFK (JFK) and San Francisco (SFO). Pick one with the gear in the top right corner; the board remembers it.
 
 Each board shows its own local time, summer time included, and switches
 language every eight seconds:
@@ -48,6 +51,7 @@ language every eight seconds:
 ![Narita, each destination in its own language](docs/narita-destinations.png)
 ![Hong Kong](docs/hongkong.png)
 ![Paris](docs/paris.png)
+![Venice](docs/venice.png)
 
 The flights are real routes with plausible flight numbers, gates and times;
 the timetable is generated, the same every day, with a few delays and
@@ -114,6 +118,9 @@ destination and route, the stations, the platform, the cars and stopping
 pattern and the minutes to the next train, then the following services. The
 City Circle screens list six trains; intercity and regional ones lead with the
 departure time and mark booked-seats-only trains; one screen is a notice.
+Stations that do not fit move up, one way, until the last of them shows, and
+start again from the top. On a screen wider than 16:9 the wall is one row of
+taller screens, four of them for Sydney services.
 
 ![Sydney Central](docs/sydney-central-concourse.png)
 
