@@ -212,6 +212,17 @@ static const Route kMalpensa[] = {
 	{ "BER", "U2", 4572, 1 }, { "CPH", "SK", 688, 1 },
 };
 
+static const Route kMarcoPolo[] = {
+	{ "ROM", "AZ", 1462, 3 }, { "NAP", "U2", 2721, 2 }, { "PMO", "U2", 2769, 1 },
+	{ "CTA", "U2", 2765, 1 }, { "PAR", "AF", 1427, 2 }, { "PAR", "U2", 4642, 1 },
+	{ "LON", "BA", 2585, 2 }, { "LON", "U2", 8642, 1 }, { "FRA", "LH", 327, 2 },
+	{ "MUC", "LH", 1975, 2 }, { "AMS", "KL", 1660, 2 }, { "MAD", "IB", 3237, 1 },
+	{ "BCN", "VY", 6409, 1 }, { "LIS", "TP", 841, 1 }, { "ATH", "A3", 661, 1 },
+	{ "IST", "TK", 1868, 1 }, { "ZRH", "LX", 1671, 1 }, { "VIE", "OS", 534, 1 },
+	{ "CPH", "SK", 1690, 1 }, { "BER", "U2", 5016, 1 }, { "DXB", "EK", 136, 1 },
+	{ "DOH", "QR", 132, 1 }, { "NYC", "DL", 205, 1 }, { "NYC", "UA", 169, 1 },
+};
+
 static const Route kKennedy[] = {
 	{ "LON", "BA", 178, 3 }, { "LON", "VS", 4, 2 }, { "PAR", "AF", 7, 2 },
 	{ "PAR", "DL", 264, 1 }, { "MIL", "AZ", 609, 1 }, { "ROM", "AZ", 611, 1 },
@@ -277,6 +288,9 @@ const Airport kAirports[] = {
 		{ LANG_FR, LANG_EN, LANG_DEST }, 3 },
 	{ "MXP", LANG_IT, "MILANO MALPENSA", "MILAN MALPENSA AIRPORT",
 		60, DST_EU, "AB", 1, 60, false, ROUTES(kMalpensa),
+		{ LANG_IT, LANG_EN, LANG_DEST }, 3 },
+	{ "VCE", LANG_IT, "VENEZIA MARCO POLO", "VENICE MARCO POLO AIRPORT",
+		60, DST_EU, "ABC", 1, 40, false, ROUTES(kMarcoPolo),
 		{ LANG_IT, LANG_EN, LANG_DEST }, 3 },
 	{ "JFK", LANG_EN, "NEW YORK JFK", "",
 		-5 * 60, DST_US, "B", 20, 55, false, ROUTES(kKennedy),

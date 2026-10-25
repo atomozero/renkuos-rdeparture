@@ -74,6 +74,7 @@ static const char* kMenuNames[] = {
 	"London Heathrow (LHR)",
 	"Paris Charles de Gaulle (CDG)",
 	"Milano Malpensa (MXP)",
+	"Venezia Marco Polo (VCE)",
 	"New York JFK (JFK)",
 	"San Francisco (SFO)",
 };
