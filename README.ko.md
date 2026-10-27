@@ -2,7 +2,7 @@
 
 <img src="docs/icon.png" width="64" alt="">
 
-[English](README.md) | [日本語](README.ja.md) | **한국어**
+[English](README.md) | [日本語](README.ja.md) | **한국어** | [Italiano](README.it.md)
 
 RenkuOS (HaikuOS)용 공항 출발 안내판입니다. 창 테두리 없이 전체 화면으로 나옵니다.
 도쿄역, 서울역, 런던 빅토리아역, 시드니 센트럴역의 열차 안내판도 있습니다.
@@ -26,6 +26,9 @@ pkgman install rdepartures
 **Deskbar -> Applications**에서 **R Departures**를 실행합니다. 플랩 폰트(TeX Gyre
 Heros Condensed Bold)도 패키지가 함께 설치합니다.
 
+같은 안내판을 스크린세이버로도 쓸 수 있습니다:
+[R Departures 스크린세이버](https://github.com/rainygirl/rdepartures-screensaver) (`pkgman install rdepartures_screensaver`).
+
 `pkgman add-repo`가 `Operation not supported`로 실패하면 그 이미지의 네트워크
 킷에 TLS가 없는 것입니다. `https://` 대신 `http://`를 사용하세요.
 
@@ -45,6 +48,7 @@ Heros Condensed Bold)도 패키지가 함께 설치합니다.
 ![나리타, 목적지 언어](docs/narita-destinations.png)
 ![홍콩](docs/hongkong.png)
 ![파리](docs/paris.png)
+![베네치아](docs/venice.png)
 
 항공편은 실제 노선에 그럴듯한 편명, 탑승구, 시각을 붙인 것입니다. 시간표는 매일
 같게 만들어지고, 지연과 결항 몇 편은 날짜에 따라 정해집니다. 실시간 데이터는
@@ -104,7 +108,9 @@ services)과 청록 탭(Metro) 아래로, 노선·승강장마다 화면 하나�
 T9, M1), 행선지와 경유지, 정차역, 승강장, 객차 수와 정차 방식, 다음 열차까지 남은 분,
 그리고 그 뒤 열차들(Following Services)을 보여 줍니다. City 순환선 화면은 열차 6편을,
 시외·장거리 화면은 출발 시각을 먼저 보여 주고 지정석 전용 열차를 표시합니다. 화면 하나는
-안내문입니다.
+안내문입니다. 칸에 다 들어가지 않는 정차역은 마지막 역이 보일 때까지 위로 올라간 뒤 처음부터
+다시 시작합니다. 16:9보다 가로로 긴 화면에서는 키가 큰 화면 한 줄로 나오고, Sydney
+services는 4칸이 됩니다.
 
 ![시드니 센트럴역](docs/sydney-central-concourse.png)
 

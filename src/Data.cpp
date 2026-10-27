@@ -65,6 +65,7 @@ static const City kCities[] = {
 	{ "ROM", { "ROME", "로마", "ローマ", "ROME", "ROMA", "羅馬" }, "ROMA", LANG_IT },
 	{ "NAP", { "NAPLES", "나폴리", "ナポリ", "NAPLES", "NAPOLI", "拿坡里" }, "NAPOLI", LANG_IT },
 	{ "PMO", { "PALERMO", "팔레르모", "パレルモ", "PALERME", "PALERMO", "巴勒莫" }, "PALERMO", LANG_IT },
+	{ "VCE", { "VENICE", "베네치아", "ヴェネツィア", "VENISE", "VENEZIA", "威尼斯" }, "VENEZIA", LANG_IT },
 	{ "CTA", { "CATANIA", "카타니아", "カターニア", "CATANE", "CATANIA", "卡塔尼亞" }, "CATANIA", LANG_IT },
 	{ "FRA", { "FRANKFURT", "프랑크푸르트", "フランクフルト", "FRANCFORT", "FRANCOFORTE", "法蘭克福" }, "FRANKFURT", LANG_DE },
 	{ "MUC", { "MUNICH", "뮌헨", "ミュンヘン", "MUNICH", "MONACO BAVIERA", "慕尼黑" }, "MÜNCHEN", LANG_DE },
@@ -174,7 +175,8 @@ static const Route kNarita[] = {
 
 static const Route kHeathrow[] = {
 	{ "PAR", "AF", 1381, 3 }, { "PAR", "BA", 304, 3 }, { "MIL", "BA", 576, 2 },
-	{ "ROM", "BA", 548, 2 }, { "FRA", "LH", 921, 3 }, { "MUC", "LH", 2481, 2 },
+	{ "ROM", "BA", 548, 2 }, { "VCE", "BA", 2584, 1 }, { "FRA", "LH", 921, 3 },
+	{ "MUC", "LH", 2481, 2 },
 	{ "AMS", "KL", 1000, 3 }, { "MAD", "IB", 3171, 2 }, { "BCN", "BA", 474, 2 },
 	{ "LIS", "TP", 1351, 2 }, { "DUB", "EI", 155, 3 }, { "ATH", "BA", 640, 1 },
 	{ "IST", "TK", 1980, 2 }, { "ZRH", "LX", 317, 2 }, { "VIE", "OS", 452, 1 },
@@ -188,6 +190,7 @@ static const Route kHeathrow[] = {
 
 static const Route kCharlesDeGaulle[] = {
 	{ "LON", "AF", 1680, 3 }, { "MIL", "AF", 1612, 2 }, { "ROM", "AF", 1104, 2 },
+	{ "VCE", "AF", 1526, 2 },
 	{ "FRA", "LH", 1029, 2 }, { "MUC", "LH", 2229, 1 }, { "AMS", "KL", 1224, 3 },
 	{ "MAD", "AF", 1300, 2 }, { "BCN", "AF", 1148, 2 }, { "LIS", "TP", 433, 2 },
 	{ "ATH", "AF", 1832, 1 }, { "IST", "TK", 1824, 2 }, { "NCE", "AF", 7700, 3 },
@@ -226,6 +229,7 @@ static const Route kMarcoPolo[] = {
 static const Route kKennedy[] = {
 	{ "LON", "BA", 178, 3 }, { "LON", "VS", 4, 2 }, { "PAR", "AF", 7, 2 },
 	{ "PAR", "DL", 264, 1 }, { "MIL", "AZ", 609, 1 }, { "ROM", "AZ", 611, 1 },
+	{ "VCE", "DL", 221, 1 },
 	{ "FRA", "LH", 401, 1 }, { "MUC", "LH", 411, 1 }, { "AMS", "KL", 642, 1 },
 	{ "MAD", "IB", 6250, 1 }, { "BCN", "DL", 168, 1 }, { "LIS", "TP", 210, 1 },
 	{ "DUB", "EI", 106, 1 }, { "ATH", "DL", 200, 1 }, { "IST", "TK", 2, 1 },
@@ -291,6 +295,7 @@ const Airport kAirports[] = {
 		{ LANG_IT, LANG_EN, LANG_DEST }, 3 },
 	{ "VCE", LANG_IT, "VENEZIA MARCO POLO", "VENICE MARCO POLO AIRPORT",
 		60, DST_EU, "ABC", 1, 40, false, ROUTES(kMarcoPolo),
+		60, DST_EU, "", 1, 58, false, ROUTES(kVenezia),
 		{ LANG_IT, LANG_EN, LANG_DEST }, 3 },
 	{ "JFK", LANG_EN, "NEW YORK JFK", "",
 		-5 * 60, DST_US, "B", 20, 55, false, ROUTES(kKennedy),
